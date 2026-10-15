@@ -1,0 +1,30 @@
+name: static analysis
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  larastan:
+    runs-on: ubuntu-latest
+
+    name: larastan
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: setup php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, fileinfo
+          coverage: none
+
+      - name: install dependencies
+        run: composer update --prefer-stable --prefer-dist --no-interaction
+
+      - name: run larastan
+        run: composer analyse -- --error-format=github

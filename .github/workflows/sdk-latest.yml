@@ -1,0 +1,41 @@
+name: sdk latest
+
+# Runs against the newest laravel/ai release, ignoring the composer.json constraint,
+# so breaking changes (including to the protected gateway methods Headroom extends) surface early.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  sdk-latest:
+    runs-on: ubuntu-latest
+
+    name: laravel/ai latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: setup php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, fileinfo, pdo_sqlite
+          coverage: none
+
+      - name: require the newest laravel/ai release
+        run: composer require "laravel/ai:*" --no-interaction --no-update
+
+      - name: install dependencies
+        run: composer update --prefer-stable --prefer-dist --no-interaction
+
+      - name: show the laravel/ai version under test
+        run: composer show laravel/ai | grep -E '^versions' | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: run tests
+        run: vendor/bin/pest
+
+      - name: run larastan
+        run: composer analyse -- --error-format=github

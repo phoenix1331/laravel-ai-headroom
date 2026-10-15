@@ -37,9 +37,20 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | `illuminate/*` | `^12.0\|^13.0` | Matches `laravel/ai` |
 | `laravel/ai` | `^1.2` | v1.2.3 is the version tested against; it is already past 1.0, so normal semver applies |
 | `laravel/pint` (dev) | `^1.32` | Code style; `pint.json` uses the `laravel` preset plus `declare_strict_types` |
-| `pestphp/pest`, `pestphp/pest-plugin-laravel` (dev) | `^4.0\|^5.0` | Pest 5 needs PHP 8.4, so Pest 4 covers the PHP 8.3 CI leg |
+| `pestphp/pest` (dev) | `^4.2\|^5.0` | Pest 5 needs PHP 8.4, so Pest 4 covers PHP 8.3; below 4.2 the Laravel 12 prefer-lowest run breaks (PHPUnit `ErrorHandler::enable()` TypeError) |
+| `pestphp/pest-plugin-laravel` (dev) | `^4.0\|^5.0` | Matches Pest |
 | `orchestra/testbench` (dev) | `^10.0\|^11.0` | Testbench 10 = Laravel 12, 11 = Laravel 13 |
 | `larastan/larastan` (dev) | `^3.0` | Static analysis at `level: max`, no baseline |
+
+## CI (`.github/`)
+
+| Workflow | Trigger | Runs |
+|---|---|---|
+| `tests.yml` | push/PR to `main` | PHP 8.3/8.4/8.5 x Laravel 12/13 x prefer-lowest/prefer-stable; Pint `--test` on prefer-stable; separate coverage job (pcov, `--min=90`, output in the job summary) |
+| `static-analysis.yml` | push/PR to `main` | Larastan with GitHub annotations |
+| `sdk-latest.yml` | Mondays 06:00 UTC + manual | `laravel/ai:*` (ignores our constraint, crosses majors), tests + Larastan |
+| `release.yml` | tag `v*` | GitHub release with notes from the matching `## [X.Y.Z]` `CHANGELOG.md` section; fails if the section is missing |
+| `dependabot.yml` | weekly | GitHub Actions and Composer dev dependencies |
 
 ## Decisions
 
