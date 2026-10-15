@@ -48,9 +48,11 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 
 ## Running things
 
-All PHP commands run inside the container: `docker compose exec app <command>`.
+All PHP commands run inside the container. The `Makefile` wraps them and exports `UID`/`GID` so the container user matches the host; `make help` lists every target.
 
-**docker**: compose up -d | compose exec app composer install | compose exec app sh
+**make**: up | down | build | shell | install | test | test-accuracy | lint | analyse | archive-check | logs
+
+`test`, `test-accuracy` and `analyse` call composer scripts (`composer test`, `composer test:accuracy`, `composer analyse`); `archive-check` runs `scripts/archive-check.sh`.
 
 ## Known environment issue
 
