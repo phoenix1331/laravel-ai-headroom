@@ -51,7 +51,9 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | Gemini native counting maps to `generateContentRequest` itself | The SDK's Gemini gateway uses the Interactions API, whose body `countTokens` does not accept |
 | Tokeniser: `yethee/tiktoken` with a persistent vocab cache path | MIT, maintained, o200k support, ~13 ms per 100 KB; downloads vocab files on first use |
 | No Docker: everything runs on the host PHP (WSL), deliberately overriding the default Docker/FrankenPHP/MySQL stack | A package has nothing to serve and no database; contributors expect `composer install && composer test`, CI runs on GitHub's PHP runners, and a container only duplicated the host runtime |
-| `composer.lock` gitignored and export-ignored | Libraries should not pin consumers' dependencies |
+| `composer.lock` gitignored | Libraries should not pin consumers' dependencies |
+| No Makefile | With Docker gone every target was a one-line wrapper; Composer scripts are the PHP package convention |
+| Dist archive ships only `src/`, `config/`, `resources/`, `composer.json`, `README.md`, `LICENSE`; everything else is `export-ignore`d in `.gitattributes` | Lean `composer require`; new dev files must be added to `.gitattributes` by hand (no automated archive check) |
 | `.claude/` gitignored | Planning files are not part of the deliverable |
 | Husky 9 git hooks in `.husky/` (tracked), installed by `npm install` via the `prepare` script | Hooks survive a fresh clone; `commit-msg` enforces lowercase conventional commits, `pre-commit` runs `pint --test` and `osv-scanner` against the local `composer.lock` |
 | `phpunit.xml` `defaultTestSuite="Unit,Feature"` | The `Accuracy` suite calls real APIs and only runs via `composer test:accuracy`; it fails fast with a clear message when no provider key is set |
@@ -61,11 +63,11 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 
 ## Running things
 
-Everything runs on the host. `make help` lists every target.
+Composer scripts are the single command surface (no Makefile).
 
-**make**: install | test | test-coverage | test-accuracy | lint | analyse | archive-check
+**composer**: test | test:coverage | test:accuracy | lint | lint:test | analyse
 
-`test`, `test-coverage`, `test-accuracy` and `analyse` call composer scripts; `test-coverage` enforces 90% on `src/`; `archive-check` runs `scripts/archive-check.sh`.
+`test:coverage` enforces 90% on `src/`.
 
 ## Host prerequisites
 

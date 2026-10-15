@@ -51,6 +51,8 @@
         "test": "pest",
         "test:coverage": "pest --coverage --min=90",
         "test:accuracy": "pest --testsuite=Accuracy",
+        "lint": "pint",
+        "lint:test": "pint --test",
         "analyse": "phpstan analyse --memory-limit=1G"
     },
     "config": {
