@@ -36,6 +36,7 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | `php` | `^8.3` | Matches `laravel/ai` |
 | `illuminate/*` | `^12.0\|^13.0` | Matches `laravel/ai` |
 | `laravel/ai` | `^1.2` | v1.2.3 is the version tested against; it is already past 1.0, so normal semver applies |
+| `laravel/pint` (dev) | `^1.32` | Code style; `pint.json` uses the `laravel` preset plus `declare_strict_types` |
 
 ## Decisions
 
