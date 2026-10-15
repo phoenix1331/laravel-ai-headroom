@@ -10,9 +10,9 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 |---|---|
 | `src/AiHeadroomServiceProvider.php` | Merges and publishes `config/ai-headroom.php` (tag `ai-headroom-config`) |
 | `src/Facades/`, `src/HeadroomManager.php` | Public entry point: `Headroom::for()`, `Headroom::count()`, `Headroom::fake()` |
-| `src/Resolving/` | Builds the request an agent would send, without sending it |
+| `src/Resolving/` | Rebuilds the `Laravel\Ai\PendingStep` an agent would send, for `Headroom::for()` and `headroom:inspect` |
 | `src/Counting/` | `Counter` contract, native provider counters, estimating counter, resolver, escalation |
-| `src/Calibration/`, `src/Listeners/` | Learns a per-model correction factor from actual usage reported in SDK responses |
+| `src/Calibration/` | Learns a per-model correction factor from actual usage, fed by the `EnsureHeadroom` middleware |
 | `src/Models/` | `ModelRegistry`: context windows and prices from config |
 | `src/Data/`, `src/Enums/` | `TokenCount`, `Cost`, `CountMethod` value objects |
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
@@ -27,7 +27,7 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | Service | Use |
 |---|---|
 | `laravel/ai` | The SDK whose agent requests are counted |
-| Anthropic, Gemini, OpenAI token counting endpoints | Exact counts in `native`/`auto` mode; never called in the default test suite |
+| Anthropic `POST /v1/messages/count_tokens`, OpenAI `POST /v1/responses/input_tokens`, Gemini `POST /v1beta/models/{model}:countTokens` | Exact counts in `native`/`auto` mode; never called in the default test suite |
 
 ## Dependencies and constraints
 
@@ -45,8 +45,12 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 
 | Decision | Reason |
 |---|---|
-| Docker (`dunglas/frankenphp:php8.4`) is a PHP runtime only: `sleep infinity`, no ports, no MySQL | A package has nothing to serve; it gives a consistent PHP 8.4 and extension set (`intl`, `pcntl`, `pcov`, `zip`) for composer, Pest, Pint and Larastan |
-| Container runs as `${UID:-1000}:${GID:-1000}` | Keeps `vendor/` and generated files owned by the host user |
+| Guard and calibration run as `laravel/ai` agent step middleware on `PendingStep` | v1.2 hands middleware the fully resolved request (instructions, history, prompt, attachments, tools, schema, options) and the actual usage afterwards; no reflection or upstream PR needed. Details: `.claude/docs/request-resolver-spike.md` |
+| `RequestResolver` mirrors `GeneratesText::prompt()` from public APIs, guarded by a parity test against a captured `PendingStep` | Faking the agent to capture the step would mutate global state and write conversations |
+| Native counters subclass the SDK gateways to reuse their protected request-body builders | Exact provider payloads without reimplementing serialisation; protected methods are outside semver, so the weekly `sdk-latest` CI job watches them |
+| Gemini native counting maps to `generateContentRequest` itself | The SDK's Gemini gateway uses the Interactions API, whose body `countTokens` does not accept |
+| Tokeniser: `yethee/tiktoken` with a persistent vocab cache path | MIT, maintained, o200k support, ~13 ms per 100 KB; downloads vocab files on first use |
+| No Docker: everything runs on the host PHP (WSL), deliberately overriding the default Docker/FrankenPHP/MySQL stack | A package has nothing to serve and no database; contributors expect `composer install && composer test`, CI runs on GitHub's PHP runners, and a container only duplicated the host runtime |
 | `composer.lock` gitignored and export-ignored | Libraries should not pin consumers' dependencies |
 | `.claude/` gitignored | Planning files are not part of the deliverable |
 | Husky 9 git hooks in `.husky/` (tracked), installed by `npm install` via the `prepare` script | Hooks survive a fresh clone; `commit-msg` enforces lowercase conventional commits, `pre-commit` runs `pint --test` and `osv-scanner` against the local `composer.lock` |
@@ -57,20 +61,18 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 
 ## Running things
 
-All PHP commands run inside the container. The `Makefile` wraps them and exports `UID`/`GID` so the container user matches the host; `make help` lists every target.
+Everything runs on the host. `make help` lists every target.
 
-**make**: up | down | build | shell | install | test | test-accuracy | lint | analyse | archive-check | logs
+**make**: install | test | test-coverage | test-accuracy | lint | analyse | archive-check
 
-`test`, `test-accuracy` and `analyse` call composer scripts (`composer test`, `composer test:accuracy`, `composer analyse`); `composer test:coverage` enforces 90% on `src/`; `archive-check` runs `scripts/archive-check.sh`.
+`test`, `test-coverage`, `test-accuracy` and `analyse` call composer scripts; `test-coverage` enforces 90% on `src/`; `archive-check` runs `scripts/archive-check.sh`.
 
 ## Host prerequisites
 
 | Tool | Why |
 |---|---|
+| PHP 8.3+ with `curl`, `mbstring`, `pdo_sqlite`, `zip` | Composer, Pest (Testbench uses in-memory SQLite), Pint, Larastan |
+| `pcov` or `xdebug` (optional) | Local coverage only; CI reports coverage |
+| Composer 2 | Dependencies |
 | Node + npm | Husky hooks (`npm install` once after cloning) |
-| PHP on the host | `pre-commit` calls `./vendor/bin/pint --test` directly |
 | `osv-scanner` | `pre-commit` security audit (`go install github.com/google/osv-scanner/cmd/osv-scanner@latest`) |
-
-## Known environment issue
-
-On WSL with `"credsStore": "desktop.exe"` in `~/.docker/config.json`, `docker compose build` can fail with `error getting credentials`. Pull the base images first: `docker pull dunglas/frankenphp:php8.4` and `docker pull composer:2`.
