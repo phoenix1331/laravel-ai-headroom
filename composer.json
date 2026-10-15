@@ -35,6 +35,11 @@
             "Phoenix1331\\AiHeadroom\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Phoenix1331\\AiHeadroom\\Tests\\": "tests/"
+        }
+    },
     "extra": {
         "laravel": {
             "providers": [
@@ -42,12 +47,23 @@
             ]
         }
     },
+    "scripts": {
+        "test": "pest",
+        "test:coverage": "pest --coverage --min=90",
+        "test:accuracy": "pest --testsuite=Accuracy"
+    },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require-dev": {
-        "laravel/pint": "^1.32"
+        "laravel/pint": "^1.32",
+        "orchestra/testbench": "^10.0|^11.0",
+        "pestphp/pest": "^4.0|^5.0",
+        "pestphp/pest-plugin-laravel": "^4.0|^5.0"
     }
 }
