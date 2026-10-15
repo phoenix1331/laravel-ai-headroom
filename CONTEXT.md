@@ -39,6 +39,7 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | `laravel/pint` (dev) | `^1.32` | Code style; `pint.json` uses the `laravel` preset plus `declare_strict_types` |
 | `pestphp/pest`, `pestphp/pest-plugin-laravel` (dev) | `^4.0\|^5.0` | Pest 5 needs PHP 8.4, so Pest 4 covers the PHP 8.3 CI leg |
 | `orchestra/testbench` (dev) | `^10.0\|^11.0` | Testbench 10 = Laravel 12, 11 = Laravel 13 |
+| `larastan/larastan` (dev) | `^3.0` | Static analysis at `level: max`, no baseline |
 
 ## Decisions
 
@@ -51,6 +52,7 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | Husky 9 git hooks in `.husky/` (tracked), installed by `npm install` via the `prepare` script | Hooks survive a fresh clone; `commit-msg` enforces lowercase conventional commits, `pre-commit` runs `pint --test` and `osv-scanner` against the local `composer.lock` |
 | `phpunit.xml` `defaultTestSuite="Unit,Feature"` | The `Accuracy` suite calls real APIs and only runs via `composer test:accuracy`; it fails fast with a clear message when no provider key is set |
 | Interface placement checked by a Finder-based test, not a Pest arch expectation | Pest has no expectation for "interfaces live only in `Contracts`" |
+| Larastan analyses `src/` and `config/` only, not `tests/` | Pest's dynamic `arch()->expect()` API is untypable at max level; tests are covered by Pest itself |
 | Hook bodies are POSIX `sh` | Husky runs hooks with `sh -e`, which is `dash` on Ubuntu/WSL; verify with `sh .husky/<hook>` |
 
 ## Running things

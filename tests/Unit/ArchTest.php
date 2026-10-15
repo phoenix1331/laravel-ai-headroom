@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Finder\SplFileInfo;
 
 arch('debugging functions are not left in the code')
     ->expect(['dd', 'dump', 'ray', 'var_dump', 'print_r', 'die', 'exit'])
