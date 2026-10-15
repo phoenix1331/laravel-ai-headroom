@@ -45,6 +45,8 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | Container runs as `${UID:-1000}:${GID:-1000}` | Keeps `vendor/` and generated files owned by the host user |
 | `composer.lock` gitignored and export-ignored | Libraries should not pin consumers' dependencies |
 | `.claude/` gitignored | Planning files are not part of the deliverable |
+| Husky 9 git hooks in `.husky/` (tracked), installed by `npm install` via the `prepare` script | Hooks survive a fresh clone; `commit-msg` enforces lowercase conventional commits, `pre-commit` runs `pint --test` and `osv-scanner` against the local `composer.lock` |
+| Hook bodies are POSIX `sh` | Husky runs hooks with `sh -e`, which is `dash` on Ubuntu/WSL; verify with `sh .husky/<hook>` |
 
 ## Running things
 
@@ -53,6 +55,14 @@ All PHP commands run inside the container. The `Makefile` wraps them and exports
 **make**: up | down | build | shell | install | test | test-accuracy | lint | analyse | archive-check | logs
 
 `test`, `test-accuracy` and `analyse` call composer scripts (`composer test`, `composer test:accuracy`, `composer analyse`); `archive-check` runs `scripts/archive-check.sh`.
+
+## Host prerequisites
+
+| Tool | Why |
+|---|---|
+| Node + npm | Husky hooks (`npm install` once after cloning) |
+| PHP on the host | `pre-commit` calls `./vendor/bin/pint --test` directly |
+| `osv-scanner` | `pre-commit` security audit (`go install github.com/google/osv-scanner/cmd/osv-scanner@latest`) |
 
 ## Known environment issue
 
