@@ -8,6 +8,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use Laravel\Ai\AiManager;
+use Phoenix1331\AiHeadroom\Context\ContextResolver;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
 use Phoenix1331\AiHeadroom\Counting\CounterResolver;
@@ -88,11 +89,15 @@ class AiHeadroomServiceProvider extends ServiceProvider
 
         $this->app->bind(Counter::class, CounterResolver::class);
 
+        $this->app->singleton(ContextResolver::class, fn (Application $app): ContextResolver => new ContextResolver($app->make('log')));
+
         $this->app->singleton(HeadroomManager::class, fn (Application $app): HeadroomManager => new HeadroomManager(
             counter: $app->make(Counter::class),
             models: $app->make(ModelRegistry::class),
             config: $app->make('config'),
             resolver: $app->make(RequestResolver::class),
+            context: $app->make(ContextResolver::class),
+            events: $app->make('events'),
         ));
     }
 

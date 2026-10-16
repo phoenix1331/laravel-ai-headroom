@@ -22,10 +22,14 @@ final readonly class Cost
 
     public float $output;
 
+    /**
+     * @param  bool  $approximate  True when part of the cost could not be priced exactly, such as cache tokens without a registry price.
+     */
     public function __construct(
         float $input,
         float $output,
         public Currency $currency,
+        public bool $approximate = false,
     ) {
         if ($input < 0 || $output < 0) {
             throw new InvalidArgumentException('Cost amounts cannot be negative.');
@@ -68,7 +72,7 @@ final readonly class Cost
             throw new InvalidArgumentException('An exchange rate must be greater than zero.');
         }
 
-        return new self($this->input * $rate, $this->output * $rate, $currency);
+        return new self($this->input * $rate, $this->output * $rate, $currency, $this->approximate);
     }
 
     /**
@@ -80,7 +84,7 @@ final readonly class Cost
     }
 
     /**
-     * @return array{input: float, output: float, total: float, currency: string}
+     * @return array{input: float, output: float, total: float, currency: string, approximate: bool}
      */
     public function toArray(): array
     {
@@ -89,6 +93,7 @@ final readonly class Cost
             'output' => $this->output,
             'total' => $this->total(),
             'currency' => $this->currency->value,
+            'approximate' => $this->approximate,
         ];
     }
 }

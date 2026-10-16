@@ -66,9 +66,27 @@ it('works out context usage', function (int $total, int $window, float $percent,
 ]);
 
 it('serialises to an array', function (): void {
-    $count = tokenCount(total: 1_030, breakdown: ['instructions' => 400, 'prompt' => 600]);
+    $count = new TokenCount(
+        total: 1_030,
+        breakdown: ['instructions' => 400, 'prompt' => 600],
+        method: CountMethod::Native,
+        confidence: 0.02,
+        model: 'claude-sonnet-5-5',
+        contextWindow: 200_000,
+        estimatedCost: new Cost(0.15, 0.96, Currency::Usd),
+        requestId: '01JTESTREQUEST0000000000000',
+        provider: 'anthropic',
+        agent: 'App\\Ai\\Agents\\SupportAgent',
+        invocationId: 'inv-1',
+        context: ['tenant_id' => 7],
+    );
 
     expect($count->toArray())->toBe([
+        'request_id' => '01JTESTREQUEST0000000000000',
+        'provider' => 'anthropic',
+        'agent' => 'App\\Ai\\Agents\\SupportAgent',
+        'invocation_id' => 'inv-1',
+        'model' => 'claude-sonnet-5-5',
         'total' => 1_030,
         'breakdown' => [
             'instructions' => 400,
@@ -79,7 +97,6 @@ it('serialises to an array', function (): void {
         ],
         'method' => 'native',
         'confidence' => 0.02,
-        'model' => 'claude-sonnet-5-5',
         'context_window' => 200_000,
         'percent_used' => 0.52,
         'remaining' => 198_970,
@@ -89,8 +106,24 @@ it('serialises to an array', function (): void {
             'output' => 0.96,
             'total' => 1.11,
             'currency' => 'USD',
+            'approximate' => false,
         ],
+        'context' => ['tenant_id' => 7],
     ]);
+});
+
+it('generates a ULID request ID when none is given, unique per count', function (): void {
+    expect(tokenCount()->requestId())->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/')
+        ->and(tokenCount()->requestId())->not->toBe(tokenCount()->requestId());
+});
+
+it('exposes the identifiers and context it was built with', function (): void {
+    $count = tokenCount();
+
+    expect($count->provider())->toBeNull()
+        ->and($count->agent())->toBeNull()
+        ->and($count->invocationId())->toBeNull()
+        ->and($count->context())->toBe([]);
 });
 
 it('rejects invalid values', function (Closure $make, string $message): void {

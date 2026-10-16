@@ -40,7 +40,7 @@ Headroom counts the tokens in a Laravel AI SDK request before it is sent. Depend
 
 **Calibration data** - The calibration store holds per-model numbers only: sample counts, correction factors and measured error. It does not store prompts, responses or user identifiers.
 
-**Events and exceptions** - `TokensCounted`, `HeadroomLow` and `TokenLimitExceeded` carry a `TokenCount`, which holds token totals, the per-part breakdown, model and cost figures. They do not carry prompt content, so logging them does not leak conversations.
+**Events and exceptions** - `TokensCounted`, `TokensUsed`, `HeadroomLow`, `RequestBlocked`, `RequestFailed` and `TokenLimitExceeded` carry token figures, costs, model and provider names, IDs and your scalar context tags. They never carry prompt, instruction, tool or response text, and `RequestFailed` records the exception class and HTTP status but never the message, since provider errors can echo prompt content. Tests serialise every event to enforce this. Context tags are whatever your `resolveContextUsing()` callback returns, so avoid putting personal data in them if your event listeners ship elsewhere.
 
 **Dependency chain** - Headroom depends on `laravel/ai` and `yethee/tiktoken`. Keep your `composer.lock` up to date and use a tool like `osv-scanner` or `composer audit` to monitor for vulnerabilities in the dependency chain.
 

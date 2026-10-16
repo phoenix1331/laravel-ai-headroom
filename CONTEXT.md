@@ -9,7 +9,7 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | Path | Role |
 |---|---|
 | `src/AiHeadroomServiceProvider.php` | Merges and publishes `config/ai-headroom.php` (tag `ai-headroom-config`) |
-| `src/Facades/Headroom.php`, `src/HeadroomManager.php` | Public entry point (alias `Headroom`). Built: `for()` (agent request via `RequestResolver` + `Counter`), `count()`, `defaultModel()`, `toTokenCount()`. Planned: `recordUsage()`, `resolveContextUsing()`, `fake()` |
+| `src/Facades/Headroom.php`, `src/HeadroomManager.php` | Public entry point (alias `Headroom`). Built: `for()` (fires `TokensCounted`), `count()` (no events), `recordUsage()` (fires `TokensUsed`, waits for streams), `resolveContextUsing()`, `defaultModel()`, `toTokenCount()`. Planned: `fake()` |
 | `src/Resolving/RequestResolver.php` | `resolve($agent, $prompt, $attachments, provider:, model:, messages:, tools:)` -> the first `PendingStep` the SDK would build, without calling the model |
 | `tests/Fixtures/Agents/` | Parity fixtures (instructions only, conversation with tool calls/replay blocks, tools incl. provider tools and a sub-agent, structured output with attributes, provider/model attributes and methods, cheapest/smartest, failover); `CapturesSteps` records the SDK's real `PendingStep` |
 | `src/Counting/` | `Contracts\Counter` (`PendingStep` -> `Tally`), `Contracts\Tokeniser`, `EstimatingCounter`, `TiktokenTokeniser` (o200k), `NativeCounter` base (provider lookup, 15 s timeout, breakdown scaling), `AnthropicCounter`, `GeminiCounter`, `OpenAiCounter`, `CounterResolver` (bound to `Counter`), `NativeCountCache`, `StepFingerprint`, `ToolDefinition` (shared tool shape), `EscalatingCounter` (auto mode) |
@@ -17,12 +17,15 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | `src/Calibration/` | Learns a per-model correction factor from actual usage, fed by the `EnsureHeadroom` middleware |
 | `src/Models/ModelRegistry.php` | Model specs: shipped `resources/models.php` merged with `config('ai-headroom.models')` overrides; cautious fallback for unknown models |
 | `resources/models.php` | Shipped context windows, max output and per-million prices (with long-prompt tiers) plus `last_checked`; not published |
-| `src/Data/`, `src/Enums/` | `TokenCount`, `Tally` (counter output: figures only), `Limits`, `Cost`, `ModelSpec`, `CountMethod`, `CountingMode`, `Currency` |
+| `src/Data/`, `src/Enums/` | `TokenCount` (with `requestId`, provider, agent, invocationId, context), `Tally` (counter output: figures only), `Limits`, `Cost` (with `approximate`), `ModelSpec`, `CountMethod`, `CountingMode`, `Currency`, `LimitType` |
+| `src/Events/` | Public API (SemVer): `TokensCounted`, `TokensUsed`, `HeadroomLow`, `RequestBlocked`, `RequestFailed`; final readonly, typed, no text. Reference: `docs/events.md` |
+| `src/Exceptions/TokenLimitExceeded.php` | Carries `TokenCount`, `LimitType`, limit and actual values; message is figures only |
+| `src/Context/ContextResolver.php` | `Headroom::resolveContextUsing()` callback; scalar tags only, logs and continues on failure |
 | `src/Currency/` | `Contracts\ExchangeRates` and `ConfiguredExchangeRates` (fixed rates per 1 USD from config) |
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
 | `src/Console/` | `headroom:inspect`, `headroom:models`, `headroom:calibration` |
 | `config/ai-headroom.php` | Package config |
-| `docs/` | GitHub Pages site (export-ignored) |
+| `docs/` | GitHub Pages site and `events.md` event reference (export-ignored; the README links to it) |
 
 Most of `src/` is planned, not yet built. Treat the table as the target layout.
 
@@ -69,7 +72,12 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | `RequestResolver` mirrors `Promptable::prompt()` (provider/model resolution, prompt input, declared tools), `GeneratesText::prompt()` (history, `resolveTool()`, schema) and the loop's first step (`settleAbandonedToolCalls()`, `withoutForeignReplayBlocks()`, `toolsSupportedBy()`), all from public data | Faking the agent to capture the step would mutate global state and write conversations |
 | `RequestResolverParityTest` runs each fixture through the real SDK (agent faked, capture middleware) and requires equal `StepFingerprint`, provider, model, message/tool classes and options; mutation-checked (skipping settle, tool filtering or `#[UseCheapestModel]` each fail it) | Drift in laravel/ai shows up as a failing test, including in the weekly `sdk-latest` run |
 | `Headroom::for()` prices output at the agent's `maxTokens` (`#[MaxTokens]` or `maxTokens()`), else the model maximum | Same worst-case rule as plain counts, using what the SDK would actually send |
-| Events are public API for a future companion store/dashboard; Headroom itself stores nothing per request. Approved design and decisions: `.claude/tasks/BRIEF.md` "Events (public API)" | Keeps core lean (no migrations); request ID, invocation ID, context tags and no-text guarantee are built in the events task |
+| Events are public API for a future companion store/dashboard; Headroom stores nothing per request. Design and decisions: `.claude/tasks/BRIEF.md` "Events (public API)" | Keeps core lean (no migrations) |
+| `TokenCount` carries requestId, provider, agent, invocationId and context tags | `recordUsage()` can build `TokensUsed` from the count alone, even in another process |
+| `recordUsage()` reports the run's first step usage and meta; prices an unrecognised reported model (dated snapshot) as the counted model | Matches what `Headroom::for()` counted; avoids fallback pricing for snapshot names |
+| Actual cost: uncached input + cache reads/writes at their own prices + output; missing cache price prices those tokens as input and sets `Cost::approximate` | Never silently wrong; Anthropic cache writes use the 5-minute rate (TTL not reported) |
+| Non-scalar context tags are dropped with a warning rather than thrown | "Rejected" while honouring "tagging never fails a request" |
+| Event reference lives in `docs/events.md` until the README task | RULES.md keeps the README for the final task |
 | Failover lists resolve to their first provider; approval-decision input is rejected; `withMessages()`/`withTools()` state must be passed as `messages:`/`tools:` | The SDK keeps that state private and flushes it on read; decisions resume a run rather than start one |
 | Native counters subclass the SDK gateways to reuse their protected request-body builders | Exact provider payloads without reimplementing serialisation; protected methods are outside semver, so the weekly `sdk-latest` CI job watches them |
 | Gemini native counting maps to `generateContentRequest` itself | The SDK's Gemini gateway uses the Interactions API, whose body `countTokens` does not accept |

@@ -10,6 +10,8 @@ use Phoenix1331\AiHeadroom\HeadroomManager;
 /**
  * @method static \Phoenix1331\AiHeadroom\Data\TokenCount for(\Laravel\Ai\Contracts\Agent $agent, \Laravel\Ai\Contracts\AgentInput|\Laravel\Ai\Messages\UserMessage|string $prompt, array<int, mixed> $attachments = [], \Laravel\Ai\Enums\Lab|array<array-key, mixed>|string|null $provider = null, ?string $model = null, ?iterable<int, mixed> $messages = null, ?iterable<int, mixed> $tools = null)
  * @method static \Phoenix1331\AiHeadroom\Data\TokenCount count(string $text, ?string $model = null)
+ * @method static void recordUsage(\Phoenix1331\AiHeadroom\Data\TokenCount $count, \Laravel\Ai\Responses\AgentResponse|\Laravel\Ai\Responses\StreamableAgentResponse $response)
+ * @method static \Phoenix1331\AiHeadroom\HeadroomManager resolveContextUsing(callable $resolver)
  * @method static string defaultModel()
  *
  * @see HeadroomManager

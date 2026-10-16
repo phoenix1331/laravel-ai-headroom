@@ -91,6 +91,8 @@ class ModelRegistry
             outputPrice: $this->fallback->outputPrice,
             tiers: $this->fallback->tiers,
             isFallback: true,
+            cacheReadPrice: $this->fallback->cacheReadPrice,
+            cacheWritePrice: $this->fallback->cacheWritePrice,
         );
     }
 
@@ -114,8 +116,19 @@ class ModelRegistry
      */
     public function costFor(string $model, int $inputTokens, ?int $maxOutputTokens): Cost
     {
-        $cost = $this->get($model)->costFor($inputTokens, $maxOutputTokens);
+        return $this->inConfiguredCurrency($this->get($model)->costFor($inputTokens, $maxOutputTokens));
+    }
 
+    /**
+     * What a completed request actually cost, in the configured currency.
+     */
+    public function actualCostFor(string $model, int $inputTokens, int $outputTokens, ?int $cacheReadTokens = null, ?int $cacheWriteTokens = null): Cost
+    {
+        return $this->inConfiguredCurrency($this->get($model)->actualCostFor($inputTokens, $outputTokens, $cacheReadTokens, $cacheWriteTokens));
+    }
+
+    private function inConfiguredCurrency(Cost $cost): Cost
+    {
         if ($this->currency === $cost->currency) {
             return $cost;
         }
@@ -153,11 +166,29 @@ class ModelRegistry
             outputPrice: (float) $attributes['output_price'],
             tiers: $this->makeTiers($name, $attributes['tiers'] ?? []),
             isFallback: $isFallback,
+            cacheReadPrice: $this->optionalPrice($name, $attributes, 'cache_read_price'),
+            cacheWritePrice: $this->optionalPrice($name, $attributes, 'cache_write_price'),
         );
     }
 
     /**
-     * @return list<array{above: int, input_price: float, output_price: float}>
+     * @param  array<array-key, mixed>  $attributes
+     */
+    private function optionalPrice(string $name, array $attributes, string $key): ?float
+    {
+        if (! isset($attributes[$key])) {
+            return null;
+        }
+
+        if (! is_numeric($attributes[$key])) {
+            throw new InvalidArgumentException("Model [{$name}] has a non-numeric [{$key}] in the Headroom model registry.");
+        }
+
+        return (float) $attributes[$key];
+    }
+
+    /**
+     * @return list<array{above: int, input_price: float, output_price: float, cache_read_price: float|null, cache_write_price: float|null}>
      */
     private function makeTiers(string $name, mixed $tiers): array
     {
@@ -176,6 +207,8 @@ class ModelRegistry
                 'above' => (int) $tier['above'],
                 'input_price' => (float) $tier['input_price'],
                 'output_price' => (float) $tier['output_price'],
+                'cache_read_price' => $this->optionalPrice($name, $tier, 'cache_read_price'),
+                'cache_write_price' => $this->optionalPrice($name, $tier, 'cache_write_price'),
             ];
         }
 

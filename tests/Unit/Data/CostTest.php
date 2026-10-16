@@ -50,6 +50,7 @@ it('serialises to an array including the total', function (): void {
         'output' => 0.5,
         'total' => 0.75,
         'currency' => 'GBP',
+        'approximate' => false,
     ]);
 });
 

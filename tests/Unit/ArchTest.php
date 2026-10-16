@@ -13,6 +13,11 @@ arch('every file declares strict types')
     ->expect('Phoenix1331\AiHeadroom')
     ->toUseStrictTypes();
 
+arch('events are final and readonly')
+    ->expect('Phoenix1331\\AiHeadroom\\Events')
+    ->toBeFinal()
+    ->toBeReadonly();
+
 arch('value objects are final and readonly')
     ->expect('Phoenix1331\AiHeadroom\Data')
     ->toBeFinal()

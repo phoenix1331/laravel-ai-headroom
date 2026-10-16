@@ -71,7 +71,7 @@ it('overrides only the fields given for a shipped model', function (): void {
 it('replaces tiers whole rather than merging them by position', function (): void {
     $spec = registry(['shipped-model' => ['tiers' => [['above' => 50_000, 'input_price' => 4.00, 'output_price' => 20.00]]]])->get('shipped-model');
 
-    expect($spec->tiers)->toBe([['above' => 50_000, 'input_price' => 4.0, 'output_price' => 20.0]]);
+    expect($spec->tiers)->toBe([['above' => 50_000, 'input_price' => 4.0, 'output_price' => 20.0, 'cache_read_price' => null, 'cache_write_price' => null]]);
 });
 
 it('adds models from the overrides', function (): void {
@@ -102,6 +102,7 @@ it('explains what is wrong with an invalid model entry', function (array $overri
     'non-numeric price' => [['shipped-model' => ['input_price' => 'free']], 'Model [shipped-model] is missing a numeric [input_price]'],
     'tiers not an array' => [['shipped-model' => ['tiers' => 'none']], 'Model [shipped-model] tiers must be an array'],
     'incomplete tier' => [['shipped-model' => ['tiers' => [['above' => 1]]]], 'Model [shipped-model] has a tier without numeric'],
+    'non-numeric cache price' => [['shipped-model' => ['cache_read_price' => 'cheap']], 'Model [shipped-model] has a non-numeric [cache_read_price]'],
 ]);
 
 it('validates the fallback too', function (): void {
@@ -137,4 +138,24 @@ it('converts the price into the configured currency', function (): void {
 
 it('prices unknown models with the fallback', function (): void {
     expect(registry()->costFor('mystery-model', 1_000_000, null)->total())->toBe(10.8);
+});
+
+it('reads optional cache prices for models and tiers', function (): void {
+    $spec = registry(['shipped-model' => [
+        'cache_read_price' => '0.30',
+        'cache_write_price' => 3.75,
+        'tiers' => [['above' => 100_000, 'input_price' => 6.00, 'output_price' => 22.50, 'cache_read_price' => 0.60]],
+    ]])->get('shipped-model');
+
+    expect($spec->cacheReadPrice)->toBe(0.3)
+        ->and($spec->cacheWritePrice)->toBe(3.75)
+        ->and($spec->tiers[0]['cache_read_price'])->toBe(0.6)
+        ->and($spec->tiers[0]['cache_write_price'])->toBeNull();
+});
+
+it('converts actual cost into the configured currency', function (): void {
+    $cost = registry(currency: Currency::Gbp)->actualCostFor('shipped-model', 100_000, 0);
+
+    expect($cost->currency)->toBe(Currency::Gbp)
+        ->and($cost->total())->toBe(0.225);
 });

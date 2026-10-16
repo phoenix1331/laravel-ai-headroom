@@ -10,6 +10,11 @@ declare(strict_types=1);
  * Prices are per million tokens in USD, standard (non-batch) rates, from the
  * providers' official pricing pages. A tier applies its prices to the whole
  * request once the prompt is above `above` input tokens.
+ *
+ * cache_read_price and cache_write_price are optional. cache_write_price is
+ * the 5-minute cache write rate; 1-hour writes cost more, so costs for them
+ * are understated. Without a cache price, reported cache tokens are priced as
+ * normal input and the cost is flagged approximate.
  */
 
 return [
@@ -25,6 +30,8 @@ return [
             'max_output_tokens' => 128_000,
             'input_price' => 10.00,
             'output_price' => 50.00,
+            'cache_read_price' => 0.25,
+            'cache_write_price' => 12.50,
         ],
 
         'claude-opus-5-5' => [
@@ -33,6 +40,8 @@ return [
             'max_output_tokens' => 128_000,
             'input_price' => 4.00,
             'output_price' => 20.00,
+            'cache_read_price' => 0.20,
+            'cache_write_price' => 5.00,
         ],
 
         'claude-sonnet-5-5' => [
@@ -41,6 +50,8 @@ return [
             'max_output_tokens' => 128_000,
             'input_price' => 2.00,
             'output_price' => 10.00,
+            'cache_read_price' => 0.10,
+            'cache_write_price' => 2.50,
         ],
 
         'claude-haiku-5-5' => [
@@ -49,8 +60,10 @@ return [
             'max_output_tokens' => 128_000,
             'input_price' => 0.10,
             'output_price' => 0.50,
+            'cache_read_price' => 0.01,
+            'cache_write_price' => 0.125,
             'tiers' => [
-                ['above' => 100_000, 'input_price' => 0.50, 'output_price' => 2.50],
+                ['above' => 100_000, 'input_price' => 0.50, 'output_price' => 2.50, 'cache_read_price' => 0.05, 'cache_write_price' => 0.625],
             ],
         ],
 

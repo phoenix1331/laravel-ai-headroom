@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Events as public API for recording every request without Headroom storing anything: `TokensCounted`, `TokensUsed`, `HeadroomLow`, `RequestBlocked` and `RequestFailed`, linked by a ULID `TokenCount::requestId()` and laravel/ai's invocation ID, and never carrying prompt, response or error text (see `docs/events.md`)
+- `Headroom::recordUsage($count, $response)` to report actual usage for requests counted with `Headroom::for()`, for normal and streamed responses
+- `Headroom::resolveContextUsing()` to tag requests with scalar context such as `tenant_id`; failures log a warning and never fail a request
+- Actual cost on `TokensUsed`, with optional `cache_read_price` and `cache_write_price` in the model registry (shipped for Claude models) and an `approximate` flag on `Cost` when cache tokens cannot be priced
+- `TokenLimitExceeded` exception carrying the `TokenCount`, and the `LimitType` enum
 - `TokenCount` value object: total, per-part breakdown (instructions, history, tools, attachments, prompt), counting method, confidence, model, context window, percent used, remaining tokens, fits and estimated cost
 - `Cost` value object: input cost plus worst-case output cost, rounded to 8 decimal places
 - `CountMethod` enum: `Native`, `Estimated`, `Calibrated`

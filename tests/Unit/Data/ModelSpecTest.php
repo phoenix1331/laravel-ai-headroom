@@ -22,11 +22,11 @@ function tieredSpec(): ModelSpec
 }
 
 it('uses base prices at or below the first tier threshold', function (int $tokens): void {
-    expect(tieredSpec()->pricesFor($tokens))->toBe(['input_price' => 0.10, 'output_price' => 0.50]);
+    expect(tieredSpec()->pricesFor($tokens))->toBe(['input_price' => 0.10, 'output_price' => 0.50, 'cache_read_price' => null, 'cache_write_price' => null]);
 })->with([0, 99_999, 100_000]);
 
 it('switches to the highest tier the prompt is above, whatever order tiers are listed in', function (int $tokens, float $input, float $output): void {
-    expect(tieredSpec()->pricesFor($tokens))->toBe(['input_price' => $input, 'output_price' => $output]);
+    expect(tieredSpec()->pricesFor($tokens))->toBe(['input_price' => $input, 'output_price' => $output, 'cache_read_price' => null, 'cache_write_price' => null]);
 })->with([
     'just over 100k' => [100_001, 0.50, 2.50],
     'at 500k' => [500_000, 0.50, 2.50],
