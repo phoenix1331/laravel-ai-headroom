@@ -45,18 +45,14 @@ body:
   - type: input
     id: input-price
     attributes:
-      label: Input price (per million tokens)
+      label: Input price (USD per million tokens)
+      description: Standard, non-batch price in US dollars, as the provider bills it.
       placeholder: "3.00"
   - type: input
     id: output-price
     attributes:
-      label: Output price (per million tokens)
+      label: Output price (USD per million tokens)
       placeholder: "15.00"
-  - type: input
-    id: currency
-    attributes:
-      label: Currency
-      placeholder: USD
   - type: input
     id: source
     attributes:

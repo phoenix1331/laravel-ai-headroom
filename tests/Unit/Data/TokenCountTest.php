@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Phoenix1331\AiHeadroom\Data\Cost;
 use Phoenix1331\AiHeadroom\Data\TokenCount;
 use Phoenix1331\AiHeadroom\Enums\CountMethod;
+use Phoenix1331\AiHeadroom\Enums\Currency;
 
 function tokenCount(int $total = 50_000, int $contextWindow = 200_000, array $breakdown = [], float $confidence = 0.02): TokenCount
 {
@@ -15,7 +16,7 @@ function tokenCount(int $total = 50_000, int $contextWindow = 200_000, array $br
         confidence: $confidence,
         model: 'claude-sonnet-5-5',
         contextWindow: $contextWindow,
-        estimatedCost: new Cost(0.15, 0.96, 'USD'),
+        estimatedCost: new Cost(0.15, 0.96, Currency::Usd),
     );
 }
 

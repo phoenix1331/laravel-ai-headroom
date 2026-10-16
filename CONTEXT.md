@@ -15,7 +15,8 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | `src/Calibration/` | Learns a per-model correction factor from actual usage, fed by the `EnsureHeadroom` middleware |
 | `src/Models/ModelRegistry.php` | Model specs: shipped `resources/models.php` merged with `config('ai-headroom.models')` overrides; cautious fallback for unknown models |
 | `resources/models.php` | Shipped context windows, max output and per-million prices (with long-prompt tiers) plus `last_checked`; not published |
-| `src/Data/`, `src/Enums/` | `TokenCount`, `Cost`, `ModelSpec`, `CountMethod` value objects |
+| `src/Data/`, `src/Enums/` | `TokenCount`, `Cost`, `ModelSpec`, `CountMethod`, `Currency` value objects |
+| `src/Currency/` | `Contracts\ExchangeRates` and `ConfiguredExchangeRates` (fixed rates per 1 USD from config) |
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
 | `src/Console/` | `headroom:inspect`, `headroom:models`, `headroom:calibration` |
 | `config/ai-headroom.php` | Package config |
@@ -72,6 +73,8 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | Shipped models live in `resources/models.php`, not the published config; config `models` only overrides or adds | A published config would freeze prices at publish time, so users would miss every price update |
 | Overrides replace fields whole per model (`array_replace`), not recursively | Recursive merge would mix a user's shorter `tiers` list with the shipped one by index |
 | Price tiers (`above` threshold) apply to the whole request, input and output | Matches Claude Haiku 5.5 (over 100k) and OpenAI (over 272k) pricing |
+| Costs reportable in USD or GBP (`currency` config, `Currency` enum); prices always stored in USD and converted at the end by `ModelRegistry::costFor()` | Providers bill in USD; one conversion point keeps `max_cost` and reports in the user's currency. New currencies = enum case + rate |
+| Exchange rates are fixed config values (`exchange_rates`, units per 1 USD, env-overridable) behind an `ExchangeRates` contract | No network dependency or API key; a live-rate implementation can be bound to the contract later |
 | Fallback model is deliberately pessimistic (128k window, $10/$50) | Unknown models should trip limits early, never late |
 | Worst-case output cost uses the request's `maxTokens` capped at the model maximum, or the model maximum when unset | Never under-states the ceiling |
 | A feature test asserts every laravel/ai default/cheapest/smartest model has a registry entry | New SDK defaults are caught in CI, including the weekly `sdk-latest` run |

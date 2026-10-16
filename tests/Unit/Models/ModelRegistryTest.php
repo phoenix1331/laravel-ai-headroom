@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Phoenix1331\AiHeadroom\Currency\ConfiguredExchangeRates;
+use Phoenix1331\AiHeadroom\Enums\Currency;
 use Phoenix1331\AiHeadroom\Models\ModelRegistry;
 
-function registry(array $overrides = [], ?array $fallback = null): ModelRegistry
+function registry(array $overrides = [], ?array $fallback = null, Currency $currency = Currency::Usd): ModelRegistry
 {
     return new ModelRegistry(
         defaults: [
@@ -27,7 +29,8 @@ function registry(array $overrides = [], ?array $fallback = null): ModelRegistry
             'input_price' => 10.00,
             'output_price' => 50.00,
         ],
-        currency: 'USD',
+        currency: $currency,
+        exchangeRates: new ConfiguredExchangeRates(['GBP' => 0.75]),
         lastChecked: '2026-10-16',
     );
 }
@@ -87,7 +90,7 @@ it('adds models from the overrides', function (): void {
 });
 
 it('exposes the currency and last checked date', function (): void {
-    expect(registry()->currency())->toBe('USD')
+    expect(registry()->currency())->toBe(Currency::Usd)
         ->and(registry()->lastChecked())->toBe('2026-10-16');
 });
 
@@ -110,8 +113,28 @@ it('rejects a malformed shipped models file', function (): void {
     file_put_contents($path, '<?php return ["models" => []];');
 
     try {
-        ModelRegistry::withShippedModels([], [], 'USD', $path);
+        ModelRegistry::withShippedModels([], [], Currency::Usd, new ConfiguredExchangeRates([]), $path);
     } finally {
         unlink($path);
     }
 })->throws(InvalidArgumentException::class, 'must return [last_checked => string, models => array]');
+
+it('prices a prompt in USD by default', function (): void {
+    $cost = registry()->costFor('shipped-model', 10_000, 1_000);
+
+    expect($cost->currency)->toBe(Currency::Usd)
+        ->and($cost->input)->toBe(0.03)
+        ->and($cost->output)->toBe(0.015);
+});
+
+it('converts the price into the configured currency', function (): void {
+    $cost = registry(currency: Currency::Gbp)->costFor('shipped-model', 10_000, 1_000);
+
+    expect($cost->currency)->toBe(Currency::Gbp)
+        ->and($cost->input)->toBe(0.0225)
+        ->and($cost->output)->toBe(0.01125);
+});
+
+it('prices unknown models with the fallback', function (): void {
+    expect(registry()->costFor('mystery-model', 1_000_000, null)->total())->toBe(10.8);
+});

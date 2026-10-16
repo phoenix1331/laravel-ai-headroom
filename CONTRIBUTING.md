@@ -64,6 +64,15 @@ Apps can override any field, or add private models, through `models` in their pu
 
 Not comfortable with a pull request? Open a "Model price or context window update" issue instead.
 
+## Adding a currency
+
+Prices are always stored in USD and converted for display and `max_cost` limits.
+
+1. Add a case to `src/Enums/Currency.php` and its symbol in `symbol()`.
+2. Add a default rate (units per 1 USD) under `exchange_rates` in `config/ai-headroom.php`, with an `HEADROOM_RATE_{CODE}` env override and the date it was checked.
+3. Extend the datasets in `tests/Unit/Enums/CurrencyTest.php` and `tests/Feature/ModelRegistryTest.php`.
+4. Update the supported list in the config comment, the README and the docs site, and add a changelog line.
+
 ## Changelog
 
 Every user-facing change adds a line under `## [Unreleased]` in `CHANGELOG.md`, in the same pull request, using the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) headings (`Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`, `Security`). Internal refactors and test-only changes do not need an entry.

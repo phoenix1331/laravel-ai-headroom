@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Phoenix1331\AiHeadroom\Models;
 
 use InvalidArgumentException;
+use Phoenix1331\AiHeadroom\Currency\Contracts\ExchangeRates;
+use Phoenix1331\AiHeadroom\Data\Cost;
 use Phoenix1331\AiHeadroom\Data\ModelSpec;
+use Phoenix1331\AiHeadroom\Enums\Currency;
 
 /**
  * Context windows and prices per model: the defaults shipped in
@@ -27,7 +30,8 @@ class ModelRegistry
         array $defaults,
         array $overrides,
         array $fallback,
-        private readonly string $currency,
+        private readonly Currency $currency,
+        private readonly ExchangeRates $exchangeRates,
         private readonly ?string $lastChecked = null,
     ) {
         foreach ($overrides as $name => $attributes) {
@@ -53,7 +57,7 @@ class ModelRegistry
      * @param  array<array-key, mixed>  $overrides
      * @param  array<array-key, mixed>  $fallback
      */
-    public static function withShippedModels(array $overrides, array $fallback, string $currency, ?string $path = null): self
+    public static function withShippedModels(array $overrides, array $fallback, Currency $currency, ExchangeRates $exchangeRates, ?string $path = null): self
     {
         $shipped = require $path ?? __DIR__.'/../../resources/models.php';
 
@@ -61,7 +65,7 @@ class ModelRegistry
             throw new InvalidArgumentException('The shipped model registry must return [last_checked => string, models => array].');
         }
 
-        return new self($shipped['models'], $overrides, $fallback, $currency, $shipped['last_checked']);
+        return new self($shipped['models'], $overrides, $fallback, $currency, $exchangeRates, $shipped['last_checked']);
     }
 
     public function has(string $model): bool
@@ -98,9 +102,25 @@ class ModelRegistry
         return $this->models;
     }
 
-    public function currency(): string
+    public function currency(): Currency
     {
         return $this->currency;
+    }
+
+    /**
+     * The worst-case cost of a prompt for the model, in the configured currency.
+     *
+     * @param  int|null  $maxOutputTokens  The request's maxTokens; null uses the model's maximum.
+     */
+    public function costFor(string $model, int $inputTokens, ?int $maxOutputTokens): Cost
+    {
+        $cost = $this->get($model)->costFor($inputTokens, $maxOutputTokens);
+
+        if ($this->currency === $cost->currency) {
+            return $cost;
+        }
+
+        return $cost->convertTo($this->currency, $this->exchangeRates->rate($cost->currency, $this->currency));
     }
 
     /**

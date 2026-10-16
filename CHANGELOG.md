@@ -13,4 +13,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `CountMethod` enum: `Native`, `Estimated`, `Calibrated`
 - Model registry with context windows, max output and prices for the current Anthropic, OpenAI and Gemini models (checked 2026-10-16), including long-prompt price tiers
 - `models` config key to override fields of a shipped model or add your own, and a cautious `fallback_model` for unknown models
+- Costs in USD or GBP via the `currency` config, converted from USD at configurable `exchange_rates` (`HEADROOM_CURRENCY`, `HEADROOM_RATE_GBP`)
 - Full `config/ai-headroom.php`: default model, counting method, safety margins, escalation band, tokeniser cache path, calibration, cache, currency and middleware defaults

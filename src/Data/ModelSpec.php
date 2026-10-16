@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Phoenix1331\AiHeadroom\Data;
 
 use InvalidArgumentException;
+use Phoenix1331\AiHeadroom\Enums\Currency;
 
 /**
- * A model's context window, output limit and prices per million tokens.
+ * A model's context window, output limit and prices per million tokens in USD.
  */
 final readonly class ModelSpec
 {
@@ -62,11 +63,11 @@ final readonly class ModelSpec
     }
 
     /**
-     * The cost of a prompt, with output priced as if every allowed output token were used.
+     * The cost of a prompt in USD, with output priced as if every allowed output token were used.
      *
      * @param  int|null  $maxOutputTokens  The request's maxTokens; null uses the model's maximum.
      */
-    public function costFor(int $inputTokens, ?int $maxOutputTokens, string $currency): Cost
+    public function costFor(int $inputTokens, ?int $maxOutputTokens): Cost
     {
         $prices = $this->pricesFor($inputTokens);
 
@@ -75,7 +76,7 @@ final readonly class ModelSpec
             maxOutputTokens: min($maxOutputTokens ?? $this->maxOutputTokens, $this->maxOutputTokens),
             inputPricePerMillion: $prices['input_price'],
             outputPricePerMillion: $prices['output_price'],
-            currency: $currency,
+            currency: Currency::Usd,
         );
     }
 }

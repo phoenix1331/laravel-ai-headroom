@@ -119,12 +119,10 @@ return [
     | Unknown models use the fallback, which is deliberately cautious (small
     | window, high prices) so limits trip early rather than late.
     |
-    | Currency labels the figures in Cost. Shipped prices are USD, so only
-    | change it if you override every model's prices.
+    | All prices, shipped or overridden, are in USD: the currency providers
+    | bill in.
     |
     */
-
-    'currency' => 'USD',
 
     'models' => [],
 
@@ -133,6 +131,24 @@ return [
         'max_output_tokens' => 16_000,
         'input_price' => 10.00,
         'output_price' => 50.00,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Currency
+    |--------------------------------------------------------------------------
+    |
+    | The currency costs are reported in, and max_cost limits are set in.
+    | Supported: USD, GBP. Prices are converted from USD at the fixed rates
+    | below (units per 1 USD), so costs are estimates; keep the rates current.
+    | GBP default checked 2026-10-09.
+    |
+    */
+
+    'currency' => env('HEADROOM_CURRENCY', 'USD'),
+
+    'exchange_rates' => [
+        'GBP' => env('HEADROOM_RATE_GBP', 0.756),
     ],
 
     /*

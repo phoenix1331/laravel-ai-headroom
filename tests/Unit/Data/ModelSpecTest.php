@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Phoenix1331\AiHeadroom\Data\ModelSpec;
+use Phoenix1331\AiHeadroom\Enums\Currency;
 
 function tieredSpec(): ModelSpec
 {
@@ -33,21 +34,22 @@ it('switches to the highest tier the prompt is above, whatever order tiers are l
 ]);
 
 it('prices output at the model maximum when the request sets no max tokens', function (): void {
-    $cost = tieredSpec()->costFor(10_000, null, 'USD');
+    $cost = tieredSpec()->costFor(10_000, null);
 
     expect($cost->input)->toBe(0.001)
-        ->and($cost->output)->toBe(0.064);
+        ->and($cost->output)->toBe(0.064)
+        ->and($cost->currency)->toBe(Currency::Usd);
 });
 
 it('prices output at the request max tokens, capped at the model maximum', function (?int $maxTokens, float $output): void {
-    expect(tieredSpec()->costFor(10_000, $maxTokens, 'USD')->output)->toBe($output);
+    expect(tieredSpec()->costFor(10_000, $maxTokens)->output)->toBe($output);
 })->with([
     'below the cap' => [4_000, 0.002],
     'above the cap' => [500_000, 0.064],
 ]);
 
 it('applies tier prices to output as well as input', function (): void {
-    $cost = tieredSpec()->costFor(200_000, 1_000, 'USD');
+    $cost = tieredSpec()->costFor(200_000, 1_000);
 
     expect($cost->input)->toBe(0.1)
         ->and($cost->output)->toBe(0.0025);

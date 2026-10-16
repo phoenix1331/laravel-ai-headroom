@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Phoenix1331\AiHeadroom\Data;
 
 use InvalidArgumentException;
+use Phoenix1331\AiHeadroom\Enums\Currency;
 
 /**
  * The estimated cost of a request: the input cost, plus the worst-case output
@@ -24,7 +25,7 @@ final readonly class Cost
     public function __construct(
         float $input,
         float $output,
-        public string $currency,
+        public Currency $currency,
     ) {
         if ($input < 0 || $output < 0) {
             throw new InvalidArgumentException('Cost amounts cannot be negative.');
@@ -43,7 +44,7 @@ final readonly class Cost
         int $maxOutputTokens,
         float $inputPricePerMillion,
         float $outputPricePerMillion,
-        string $currency,
+        Currency $currency,
     ): self {
         if ($inputTokens < 0 || $maxOutputTokens < 0) {
             throw new InvalidArgumentException('Token counts cannot be negative.');
@@ -54,6 +55,20 @@ final readonly class Cost
             output: $maxOutputTokens * $outputPricePerMillion / 1_000_000,
             currency: $currency,
         );
+    }
+
+    /**
+     * The same cost in another currency.
+     *
+     * @param  float  $rate  Units of $currency per unit of this cost's currency.
+     */
+    public function convertTo(Currency $currency, float $rate): self
+    {
+        if ($rate <= 0) {
+            throw new InvalidArgumentException('An exchange rate must be greater than zero.');
+        }
+
+        return new self($this->input * $rate, $this->output * $rate, $currency);
     }
 
     /**
@@ -73,7 +88,7 @@ final readonly class Cost
             'input' => $this->input,
             'output' => $this->output,
             'total' => $this->total(),
-            'currency' => $this->currency,
+            'currency' => $this->currency->value,
         ];
     }
 }
