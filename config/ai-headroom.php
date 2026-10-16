@@ -122,16 +122,22 @@ return [
     |--------------------------------------------------------------------------
     |
     | Compares estimates with the actual input tokens providers report, and
-    | keeps a correction factor per model. Nothing changes until a model has
-    | min_samples; corrections are clamped to 1 +/- max_correction.
+    | keeps a correction factor and measured error per model. Nothing changes
+    | until a model has min_samples. Each observation is clamped to
+    | 1 +/- max_correction so one odd request cannot skew the factor; smoothing
+    | is how much each new observation moves it (0.1 = 10%).
+    |
+    | Calibration data is a few numbers per model, kept forever in the cache
+    | store named here (null = your default store). It holds no prompt content.
     |
     */
 
     'calibration' => [
-        'enabled' => env('HEADROOM_CALIBRATION', true),
+        'enabled' => (bool) env('HEADROOM_CALIBRATION', true),
         'min_samples' => 20,
         'max_correction' => 0.5,
-        'store' => 'cache',
+        'smoothing' => 0.1,
+        'store' => env('HEADROOM_CALIBRATION_STORE'),
     ],
 
     /*

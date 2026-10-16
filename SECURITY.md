@@ -38,7 +38,7 @@ Headroom counts the tokens in a Laravel AI SDK request before it is sent. Depend
 
 **Cached counts** - Native counts are cached under a SHA-256 hash of the counted request (provider, model, instructions, messages, tools and options) and the counter. The cache stores the hash and the count, never the content itself. Caching is off by default; opt in with `HEADROOM_CACHE=true`.
 
-**Calibration data** - The calibration store holds per-model numbers only: sample counts, correction factors and measured error. It does not store prompts, responses or user identifiers.
+**Calibration data** - The calibration store holds per-model numbers only: sample counts, correction factors, measured error and when they were last updated. It lives in your cache (`calibration.store`) and does not store prompts, responses, context tags or user identifiers.
 
 **Events and exceptions** - `TokensCounted`, `TokensUsed`, `HeadroomLow`, `RequestBlocked`, `RequestFailed` and `TokenLimitExceeded` carry token figures, costs, model and provider names, IDs and your scalar context tags. They never carry prompt, instruction, tool or response text, and `RequestFailed` records the exception class and HTTP status but never the message, since provider errors can echo prompt content. Tests serialise every event to enforce this. Context tags are whatever your `resolveContextUsing()` callback returns, so avoid putting personal data in them if your event listeners ship elsewhere.
 

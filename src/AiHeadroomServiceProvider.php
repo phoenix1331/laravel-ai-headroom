@@ -9,6 +9,8 @@ use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use Laravel\Ai\AiManager;
 use Laravel\Ai\Events\StepFailed;
+use Phoenix1331\AiHeadroom\Calibration\CalibrationStore;
+use Phoenix1331\AiHeadroom\Calibration\Calibrator;
 use Phoenix1331\AiHeadroom\Context\ContextResolver;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
@@ -93,6 +95,25 @@ class AiHeadroomServiceProvider extends ServiceProvider
         $this->app->bind(Counter::class, CounterResolver::class);
 
         $this->app->singleton(RequestTracker::class);
+
+        $this->app->singleton(CalibrationStore::class, function (Application $app): CalibrationStore {
+            $store = $app->make('config')->get('ai-headroom.calibration.store');
+
+            return new CalibrationStore($app->make('cache'), is_string($store) && $store !== '' ? $store : null);
+        });
+
+        $this->app->singleton(Calibrator::class, function (Application $app): Calibrator {
+            $config = $app->make('config');
+
+            return new Calibrator(
+                store: $app->make(CalibrationStore::class),
+                enabled: $config->boolean('ai-headroom.calibration.enabled'),
+                minSamples: $config->integer('ai-headroom.calibration.min_samples'),
+                maxCorrection: $config->float('ai-headroom.calibration.max_correction'),
+                smoothing: $config->float('ai-headroom.calibration.smoothing'),
+                marginFloor: $config->float('ai-headroom.safety_margin_floor'),
+            );
+        });
 
         $this->app->singleton(ContextResolver::class, fn (Application $app): ContextResolver => new ContextResolver($app->make('log')));
 
