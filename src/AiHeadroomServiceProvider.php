@@ -11,6 +11,7 @@ use Laravel\Ai\AiManager;
 use Laravel\Ai\Events\StepFailed;
 use Phoenix1331\AiHeadroom\Calibration\CalibrationStore;
 use Phoenix1331\AiHeadroom\Calibration\Calibrator;
+use Phoenix1331\AiHeadroom\Console\CalibrationCommand;
 use Phoenix1331\AiHeadroom\Context\ContextResolver;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
@@ -132,6 +133,10 @@ class AiHeadroomServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->commands([
+            CalibrationCommand::class,
+        ]);
+
         $this->app->make('events')->listen(StepFailed::class, ReportFailedRequests::class);
         $this->app->make('events')->listen(TokensUsed::class, CalibrateFromUsage::class);
 

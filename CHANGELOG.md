@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - `EnsureHeadroom` agent middleware: counts every generation step before it is sent against `maxPercentOfContext`, `maxCost` and the context window; throws `TokenLimitExceeded` (after firing `RequestBlocked`) or, with `->report()`, fires `HeadroomLow` and lets the request through; reports `TokensUsed` after each step, including streams, and `RequestFailed` when a provider call fails
+- `php artisan headroom:calibration` shows each model's samples, correction factor, measured error, margin in use and whether it is active or still learning; `--reset` (with `--model` and `--force`) clears it
 - Self-calibration in use: real usage reported through `TokensUsed` (from the middleware or `Headroom::recordUsage()`) trains each model's correction, and estimates for calibrated models are corrected and reported as `CountMethod::Calibrated` with the measured error as confidence. Native counts are never calibrated
 - `TokensUsed::$countedModel`, the model the request was counted for
 - Self-calibration engine: a per-model correction factor and measured error learned from estimate versus actual pairs, exponentially weighted (`calibration.smoothing`), clamped per observation (`calibration.max_correction`), active after `calibration.min_samples`, with the safety margin following the measured error down to `safety_margin_floor`; stored in the cache (`HEADROOM_CALIBRATION_STORE`)

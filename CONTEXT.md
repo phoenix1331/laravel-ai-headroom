@@ -25,7 +25,7 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | `src/Context/ContextResolver.php` | `Headroom::resolveContextUsing()` callback; scalar tags only, logs and continues on failure |
 | `src/Currency/` | `Contracts\ExchangeRates` and `ConfiguredExchangeRates` (fixed rates per 1 USD from config) |
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
-| `src/Console/` | `headroom:inspect`, `headroom:models`, `headroom:calibration` |
+| `src/Console/` | Built: `headroom:calibration` (table of samples, factor, error, margin, status, updated; `--model`, `--reset` with confirmation, `--force`). Planned: `headroom:inspect`, `headroom:models` |
 | `config/ai-headroom.php` | Package config |
 | `docs/` | GitHub Pages site and `events.md` event reference (export-ignored; the README links to it) |
 
