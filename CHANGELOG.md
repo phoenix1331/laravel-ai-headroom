@@ -20,5 +20,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Gemini native counter using `POST models/{model}:countTokens` with a `generateContentRequest` built from the step
 - OpenAI native counter using `POST /v1/responses/input_tokens` with the provider's laravel/ai credentials and base URL
 - `method` config (`auto`, `native`, `estimate`) and a `counters` map from laravel/ai driver to counter class, so apps can register counters for other providers
-- Native counts are cached by a SHA-256 fingerprint of the request (hash and count only, never content), with `cache.enabled`, `cache.store` and `cache.ttl` config
+- Opt-in cache for native counts (`HEADROOM_CACHE`, `HEADROOM_CACHE_TTL`, `HEADROOM_CACHE_STORE`), keyed by a SHA-256 fingerprint of the request; stores the hash and count only, never content
 - Full `config/ai-headroom.php`: default model, counting method, safety margins, escalation band, tokeniser cache path, calibration, cache, currency and middleware defaults

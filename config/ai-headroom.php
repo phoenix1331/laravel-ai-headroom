@@ -138,15 +138,22 @@ return [
     | Native count cache
     |--------------------------------------------------------------------------
     |
-    | Native counts are cached by a hash of the counted content. Null store
-    | uses your default cache store. TTL in seconds.
+    | Off by default. When on, a native count is reused only when exactly the
+    | same request (same history, prompt, tools and options) is counted again:
+    | retries, Headroom::for() followed by sending the agent, or identical
+    | opening prompts shared by many users. Each new chat turn changes the
+    | history, so most conversation traffic is not cached.
+    |
+    | Only a SHA-256 hash of the request and the count are stored. Entries
+    | expire after the TTL (seconds); counts for identical content do not
+    | change, so a long TTL is safe. Null store uses your default cache store.
     |
     */
 
     'cache' => [
-        'enabled' => env('HEADROOM_CACHE', true),
+        'enabled' => (bool) env('HEADROOM_CACHE', false),
         'store' => env('HEADROOM_CACHE_STORE'),
-        'ttl' => 86_400,
+        'ttl' => (int) env('HEADROOM_CACHE_TTL', 86_400),
     ],
 
     /*

@@ -36,7 +36,7 @@ Headroom counts the tokens in a Laravel AI SDK request before it is sent. Depend
 
 **Tokeniser vocabulary download** - The OpenAI tokeniser (`yethee/tiktoken`) downloads its vocabulary files from `openaipublic.blob.core.windows.net` on first use and caches them locally. No prompt content is sent. Offline or locked-down hosts need the cache warmed before use; `estimate` mode is not network-free until it is.
 
-**Cached counts** - Native counts are cached under a SHA-256 hash of the counted request (provider, model, instructions, messages, tools and options) and the counter. The cache stores the hash and the count, never the content itself. Set `cache.enabled` to `false` to turn it off.
+**Cached counts** - Native counts are cached under a SHA-256 hash of the counted request (provider, model, instructions, messages, tools and options) and the counter. The cache stores the hash and the count, never the content itself. Caching is off by default; opt in with `HEADROOM_CACHE=true`.
 
 **Calibration data** - The calibration store holds per-model numbers only: sample counts, correction factors and measured error. It does not store prompts, responses or user identifiers.
 

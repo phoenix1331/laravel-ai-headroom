@@ -16,6 +16,7 @@ beforeEach(function (): void {
     app()->instance(Tokeniser::class, new WordTokeniser);
     config([
         'ai.providers.anthropic' => ['driver' => 'anthropic', 'key' => 'sk-ant-test'],
+        'ai-headroom.cache.enabled' => true,
         'cache.stores.headroom' => ['driver' => 'array'],
     ]);
     Http::fake(['api.anthropic.com/*' => Http::response(responseFixture('anthropic/count_tokens.json'))]);
@@ -25,6 +26,28 @@ function cachedStep(string $prompt = 'Where is my refund?'): PendingStep
 {
     return new PendingStep(0, true, 'anthropic', 'claude-sonnet-5-5', null, [new UserMessage($prompt)], [], null, null);
 }
+
+it('is off unless the app opts in', function (): void {
+    $defaults = require __DIR__.'/../../../config/ai-headroom.php';
+
+    expect($defaults['cache']['enabled'])->toBeFalse()
+        ->and($defaults['cache']['ttl'])->toBe(86_400);
+});
+
+it('reads the opt-in and ttl from the environment', function (): void {
+    putenv('HEADROOM_CACHE=true');
+    putenv('HEADROOM_CACHE_TTL=3600');
+
+    try {
+        $config = require __DIR__.'/../../../config/ai-headroom.php';
+    } finally {
+        putenv('HEADROOM_CACHE');
+        putenv('HEADROOM_CACHE_TTL');
+    }
+
+    expect($config['cache']['enabled'])->toBeTrue()
+        ->and($config['cache']['ttl'])->toBe(3600);
+});
 
 it('counts the same request natively only once', function (): void {
     $counter = app(AnthropicCounter::class);
