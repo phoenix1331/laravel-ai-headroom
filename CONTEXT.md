@@ -11,7 +11,8 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | `src/AiHeadroomServiceProvider.php` | Merges and publishes `config/ai-headroom.php` (tag `ai-headroom-config`) |
 | `src/Facades/Headroom.php`, `src/HeadroomManager.php` | Public entry point (alias `Headroom`). Built: `count()`, `defaultModel()`, `toTokenCount()`. Planned: `for()`, `fake()` |
 | `src/Resolving/` | Rebuilds the `Laravel\Ai\PendingStep` an agent would send, for `Headroom::for()` and `headroom:inspect` |
-| `src/Counting/` | `Contracts\Counter` (`PendingStep` -> `Tally`), `Contracts\Tokeniser`, `EstimatingCounter`, `TiktokenTokeniser` (o200k). Planned: native counters, resolver, escalation |
+| `src/Counting/` | `Contracts\Counter` (`PendingStep` -> `Tally`), `Contracts\Tokeniser`, `EstimatingCounter`, `TiktokenTokeniser` (o200k), `NativeCounter` base, `AnthropicCounter`. Planned: Gemini/OpenAI counters, resolver, escalation |
+| `src/Counting/Gateways/` | SDK gateway subclasses exposing the protected request body and client for counting endpoints (`AnthropicCountingGateway`) |
 | `src/Calibration/` | Learns a per-model correction factor from actual usage, fed by the `EnsureHeadroom` middleware |
 | `src/Models/ModelRegistry.php` | Model specs: shipped `resources/models.php` merged with `config('ai-headroom.models')` overrides; cautious fallback for unknown models |
 | `resources/models.php` | Shipped context windows, max output and per-million prices (with long-prompt tiers) plus `last_checked`; not published |
@@ -71,6 +72,8 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | `TokenCount::total()` is stored separately from the breakdown, not summed | Native endpoints return one total including message/tool overhead that belongs to no single part |
 | `TokenCount::remaining()` added beyond the brief's API | It is literally the headroom; negative when the request overflows |
 | `Cost` rounds amounts to 8 decimal places | Removes float noise (`0.15 + 0.96`) while keeping per-token precision on cheap models |
+| Native counts: total from the provider, breakdown = local estimate's split scaled to that total (floored), confidence 0.0 | Counting endpoints return one number; a second call per part would multiply cost and rate-limit use |
+| Anthropic counting: SDK `buildTextRequestBody()` filtered to `model, messages, system, tools, tool_choice, thinking, output_config, cache_control`, posted with the SDK client to `messages/count_tokens`, 15 s timeout | Same serialisation, key, base URL, version and beta headers as the real call |
 | Counters take a `Laravel\Ai\PendingStep` and return a `Tally`; `HeadroomManager::toTokenCount()` adds window and cost | One input shape for plain text, `Headroom::for()` and the middleware; counters stay free of pricing |
 | `Headroom::count($text)` counts the text as a single user message, so totals include message overhead | Same path as agent counting; matches what a provider would bill for that prompt |
 | Estimates: o200k tokens x per-provider `estimate_ratios` (openai 1.0, anthropic 1.6, gemini 1.0, default 1.6) x (1 + safety margin) for non-OpenAI | Starting points from providers' chars-per-token guidance; to be measured by the accuracy suite and corrected by calibration |

@@ -42,9 +42,9 @@ Every PHP file declares `strict_types`; Pint adds it if you forget.
 A counter turns a resolved agent request into a token count using the provider's own counting endpoint.
 
 1. **Record a fixture.** Call the provider's counting endpoint once by hand and save the JSON response in `tests/Fixtures/Responses/{provider}/`. Strip any IDs or keys.
-2. **Write the counter** in `src/Counting/{Provider}Counter.php`, implementing `Counting\Contracts\Counter`. Reuse the SDK's own request serialisation where the provider's counting endpoint accepts the same body (see `AnthropicCounter` for the pattern), and only send the fields the endpoint accepts.
+2. **Write the counter** in `src/Counting/{Provider}Counter.php`, extending `Counting\NativeCounter` and implementing `countTotal()`. Where the provider's counting endpoint accepts the same body as generation, subclass the SDK gateway in `src/Counting/Gateways/` to reuse its request body and HTTP client, and send only the fields the endpoint accepts (see `AnthropicCounter` and `AnthropicCountingGateway`).
 3. **Register it** in `Counting\CounterResolver` against the `laravel/ai` provider name.
-4. **Test it** in `tests/Unit/Counting/{Provider}CounterTest.php` with `Http::fake()` and the fixture. Assert the exact URL, headers and body sent, plus the parsed count. The default suite must never make a real API call.
+4. **Test it** in `tests/Feature/Counting/{Provider}CounterTest.php` with `Http::fake()` and `responseFixture()`. Assert the exact URL, headers and JSON body sent (compare `json_decode($request->body(), true)`, since the SDK uses objects for empty JSON maps), plus the parsed count. The default suite must never make a real API call.
 5. **Add a corpus run** for the provider in `tests/Accuracy/` so its estimate error can be measured.
 6. **Document it** with a row in the supported providers table in `README.md` and on the docs site (`docs/index.html`).
 7. **Add a changelog line** under `## [Unreleased]`.

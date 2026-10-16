@@ -16,4 +16,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Costs in USD or GBP via the `currency` config, converted from USD at configurable `exchange_rates` (`HEADROOM_CURRENCY`, `HEADROOM_RATE_GBP`)
 - `Headroom` facade and `Headroom::count($text, model: ...)` for plain text, defaulting to `default_model` or laravel/ai's default text model
 - Local estimating counter: OpenAI's o200k tokeniser, per-provider `estimate_ratios` and the safety margin for other providers, and fixed `attachment_tokens` for images, documents, audio and video
+- Anthropic native counter using `POST /v1/messages/count_tokens` with the provider's laravel/ai credentials and base URL
 - Full `config/ai-headroom.php`: default model, counting method, safety margins, escalation band, tokeniser cache path, calibration, cache, currency and middleware defaults
