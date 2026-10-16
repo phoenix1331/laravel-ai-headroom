@@ -87,5 +87,5 @@ it('renders a summary and per-provider tables', function (): void {
         ->toContain('| anthropic | `claude-sonnet-5-5` | 17.5% | 3.0% | japanese (-25.0%) |')
         ->toContain('## anthropic (`claude-sonnet-5-5`)')
         ->toContain('| prose | 1,000 | 1,100 | +10.0% | 1,010 | +1.0% |')
-        ->not->toContain('—');
+        ->not->toContain("\u{2014}"); // no em dashes in published docs
 });
