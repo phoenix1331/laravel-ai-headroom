@@ -25,6 +25,12 @@ jobs:
           extensions: mbstring, xml, ctype, fileinfo, pdo_sqlite
           coverage: none
 
+      - name: cache the tokeniser vocabulary
+        uses: actions/cache@v6
+        with:
+          path: build/tiktoken
+          key: tiktoken-o200k-base
+
       - name: require the newest laravel/ai release
         run: composer require "laravel/ai:*" --no-interaction --no-update
 

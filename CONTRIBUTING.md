@@ -26,7 +26,7 @@ npm install   # activates the git hooks
 | `composer lint:test` | Checks code style without changing files |
 | `composer analyse` | Larastan at max level |
 
-The tests use Pest with Orchestra Testbench and an in-memory SQLite database, so nothing else needs to be running.
+The tests use Pest with Orchestra Testbench and an in-memory SQLite database, so nothing else needs to be running. The first run downloads the o200k tokeniser vocabulary (~3.6 MB) into `build/tiktoken`; later runs read it from there.
 
 Every PHP file declares `strict_types`; Pint adds it if you forget.
 

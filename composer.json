@@ -28,7 +28,8 @@
         "php": "^8.3",
         "illuminate/contracts": "^12.0|^13.0",
         "illuminate/support": "^12.0|^13.0",
-        "laravel/ai": "^1.2"
+        "laravel/ai": "^1.2",
+        "yethee/tiktoken": "^1.1"
     },
     "autoload": {
         "psr-4": {
@@ -44,7 +45,10 @@
         "laravel": {
             "providers": [
                 "Phoenix1331\\AiHeadroom\\AiHeadroomServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "Headroom": "Phoenix1331\\AiHeadroom\\Facades\\Headroom"
+            }
         }
     },
     "scripts": {

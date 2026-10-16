@@ -6,6 +6,11 @@ namespace Phoenix1331\AiHeadroom;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
+use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
+use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
+use Phoenix1331\AiHeadroom\Counting\EstimatingCounter;
+use Phoenix1331\AiHeadroom\Counting\TiktokenTokeniser;
 use Phoenix1331\AiHeadroom\Currency\ConfiguredExchangeRates;
 use Phoenix1331\AiHeadroom\Currency\Contracts\ExchangeRates;
 use Phoenix1331\AiHeadroom\Enums\Currency;
@@ -31,6 +36,36 @@ class AiHeadroomServiceProvider extends ServiceProvider
                 exchangeRates: $app->make(ExchangeRates::class),
             );
         });
+
+        $this->app->singleton(Tokeniser::class, function (Application $app): Tokeniser {
+            $cachePath = $app->make('config')->string('ai-headroom.tokeniser.cache_path');
+
+            if ($cachePath === '') {
+                throw new InvalidArgumentException('Set ai-headroom.tokeniser.cache_path to a writable directory.');
+            }
+
+            return new TiktokenTokeniser($cachePath);
+        });
+
+        $this->app->singleton(EstimatingCounter::class, function (Application $app): EstimatingCounter {
+            $config = $app->make('config');
+
+            return new EstimatingCounter(
+                tokeniser: $app->make(Tokeniser::class),
+                models: $app->make(ModelRegistry::class),
+                ratios: $config->array('ai-headroom.estimate_ratios'),
+                attachmentTokens: $config->array('ai-headroom.attachment_tokens'),
+                safetyMargin: $config->float('ai-headroom.estimate_safety_margin'),
+            );
+        });
+
+        $this->app->bind(Counter::class, EstimatingCounter::class);
+
+        $this->app->singleton(HeadroomManager::class, fn (Application $app): HeadroomManager => new HeadroomManager(
+            counter: $app->make(Counter::class),
+            models: $app->make(ModelRegistry::class),
+            config: $app->make('config'),
+        ));
     }
 
     public function boot(): void

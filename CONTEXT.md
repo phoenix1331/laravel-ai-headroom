@@ -9,13 +9,13 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | Path | Role |
 |---|---|
 | `src/AiHeadroomServiceProvider.php` | Merges and publishes `config/ai-headroom.php` (tag `ai-headroom-config`) |
-| `src/Facades/`, `src/HeadroomManager.php` | Public entry point: `Headroom::for()`, `Headroom::count()`, `Headroom::fake()` |
+| `src/Facades/Headroom.php`, `src/HeadroomManager.php` | Public entry point (alias `Headroom`). Built: `count()`, `defaultModel()`, `toTokenCount()`. Planned: `for()`, `fake()` |
 | `src/Resolving/` | Rebuilds the `Laravel\Ai\PendingStep` an agent would send, for `Headroom::for()` and `headroom:inspect` |
-| `src/Counting/` | `Counter` contract, native provider counters, estimating counter, resolver, escalation |
+| `src/Counting/` | `Contracts\Counter` (`PendingStep` -> `Tally`), `Contracts\Tokeniser`, `EstimatingCounter`, `TiktokenTokeniser` (o200k). Planned: native counters, resolver, escalation |
 | `src/Calibration/` | Learns a per-model correction factor from actual usage, fed by the `EnsureHeadroom` middleware |
 | `src/Models/ModelRegistry.php` | Model specs: shipped `resources/models.php` merged with `config('ai-headroom.models')` overrides; cautious fallback for unknown models |
 | `resources/models.php` | Shipped context windows, max output and per-million prices (with long-prompt tiers) plus `last_checked`; not published |
-| `src/Data/`, `src/Enums/` | `TokenCount`, `Cost`, `ModelSpec`, `CountMethod`, `Currency` value objects |
+| `src/Data/`, `src/Enums/` | `TokenCount`, `Tally` (counter output: figures only), `Cost`, `ModelSpec`, `CountMethod`, `Currency` |
 | `src/Currency/` | `Contracts\ExchangeRates` and `ConfiguredExchangeRates` (fixed rates per 1 USD from config) |
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
 | `src/Console/` | `headroom:inspect`, `headroom:models`, `headroom:calibration` |
@@ -38,6 +38,7 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | `php` | `^8.3` | Matches `laravel/ai` |
 | `illuminate/*` | `^12.0\|^13.0` | Matches `laravel/ai` |
 | `laravel/ai` | `^1.2` | v1.2.3 is the version tested against; it is already past 1.0, so normal semver applies |
+| `yethee/tiktoken` | `^1.1` | Local o200k tokeniser; downloads ~3.6 MB vocab on first use into `tokeniser.cache_path` |
 | `laravel/pint` (dev) | `^1.32` | Code style; `pint.json` uses the `laravel` preset plus `declare_strict_types` |
 | `pestphp/pest` (dev) | `^4.2\|^5.0` | Pest 5 needs PHP 8.4, so Pest 4 covers PHP 8.3; below 4.2 the Laravel 12 prefer-lowest run breaks (PHPUnit `ErrorHandler::enable()` TypeError) |
 | `pestphp/pest-plugin-laravel` (dev) | `^4.0\|^5.0` | Matches Pest |
@@ -70,6 +71,13 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | `TokenCount::total()` is stored separately from the breakdown, not summed | Native endpoints return one total including message/tool overhead that belongs to no single part |
 | `TokenCount::remaining()` added beyond the brief's API | It is literally the headroom; negative when the request overflows |
 | `Cost` rounds amounts to 8 decimal places | Removes float noise (`0.15 + 0.96`) while keeping per-token precision on cheap models |
+| Counters take a `Laravel\Ai\PendingStep` and return a `Tally`; `HeadroomManager::toTokenCount()` adds window and cost | One input shape for plain text, `Headroom::for()` and the middleware; counters stay free of pricing |
+| `Headroom::count($text)` counts the text as a single user message, so totals include message overhead | Same path as agent counting; matches what a provider would bill for that prompt |
+| Estimates: o200k tokens x per-provider `estimate_ratios` (openai 1.0, anthropic 1.6, gemini 1.0, default 1.6) x (1 + safety margin) for non-OpenAI | Starting points from providers' chars-per-token guidance; to be measured by the accuracy suite and corrected by calibration |
+| Breakdown split: last message, if a `UserMessage`, is `prompt`; earlier messages, tool calls and tool results are `history`; tool definitions plus structured output schema are `tools` | Matches the five-part public breakdown |
+| Message overhead (3 per message + 3 per request) goes into the total only | It belongs to no single part |
+| Attachments use fixed per-kind `attachment_tokens`, unscaled; any attachment raises confidence to 0.5 | Providers count media by their own rules; flagged as approximate |
+| Tests use `tests/Fixtures/WordTokeniser` (one token per word); only `TiktokenTokeniserTest` uses the real vocab, cached in `build/tiktoken` locally and via `actions/cache` in CI | Deterministic expectations without re-downloading the vocab |
 | Shipped models live in `resources/models.php`, not the published config; config `models` only overrides or adds | A published config would freeze prices at publish time, so users would miss every price update |
 | Overrides replace fields whole per model (`array_replace`), not recursively | Recursive merge would mix a user's shorter `tiers` list with the shipped one by index |
 | Price tiers (`above` threshold) apply to the whole request, input and output | Matches Claude Haiku 5.5 (over 100k) and OpenAI (over 272k) pricing |

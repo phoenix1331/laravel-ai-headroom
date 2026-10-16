@@ -52,6 +52,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Estimate ratios and attachments
+    |--------------------------------------------------------------------------
+    |
+    | Estimates tokenise with OpenAI's o200k encoding. Other providers split
+    | text differently, so their counts are multiplied by a ratio: provider
+    | tokens per o200k token. Starting points from the providers' own guidance
+    | (Anthropic: ~2.5 characters per token, Gemini: ~4, o200k: ~4); the
+    | accuracy suite measures them and calibration corrects them per app.
+    |
+    | Attachments are not tokenised locally. Each is assumed to cost a fixed
+    | number of tokens by kind, and marks the count as approximate.
+    |
+    */
+
+    'estimate_ratios' => [
+        'openai' => 1.0,
+        'anthropic' => 1.6,
+        'gemini' => 1.0,
+        'default' => 1.6,
+    ],
+
+    'attachment_tokens' => [
+        'image' => 1_600,
+        'document' => 5_000,
+        'audio' => 2_000,
+        'video' => 15_000,
+        'other' => 5_000,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Tokeniser
     |--------------------------------------------------------------------------
     |
