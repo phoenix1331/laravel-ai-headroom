@@ -25,7 +25,7 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | `src/Context/ContextResolver.php` | `Headroom::resolveContextUsing()` callback; scalar tags only, logs and continues on failure |
 | `src/Currency/` | `Contracts\ExchangeRates` and `ConfiguredExchangeRates` (fixed rates per 1 USD from config) |
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
-| `src/Console/` | Built: `headroom:calibration` (table of samples, factor, error, margin, status, updated; `--model`, `--reset` with confirmation, `--force`). Planned: `headroom:inspect`, `headroom:models` |
+| `src/Console/` | Built: `headroom:calibration` (table of samples, factor, error, margin, status, updated; `--model`, `--reset` with confirmation, `--force`). `headroom:inspect` (breakdown table with shares and overhead row, context, cost; `--provider`, `--model`, `--json`; exit 1 when it does not fit). Planned: `headroom:models` |
 | `config/ai-headroom.php` | Package config |
 | `docs/` | GitHub Pages site and `events.md` event reference (export-ignored; the README links to it) |
 
@@ -82,6 +82,7 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | `CalibrateFromUsage` learns only from `Estimated`/`Calibrated` counts, under `TokensUsed::$countedModel`, and only when that model (or a dated snapshot `model-...`) answered; a `Calibrated` estimate is divided back to its base with the current correction | Native counts are exact; failover usage belongs to another model; the factor barely moves between count and usage at 0.1 smoothing |
 | Calibrated counts: every part and the total = base x factor x (1 + margin), confidence = measured error (attachments still floor at 0.5) | Native counters scale the same estimate split, so calibration never changes a native total |
 | Known limitation: requests with attachments feed fixed per-attachment guesses into the text factor | Clamping and smoothing bound the effect; could exclude them later |
+| `headroom:inspect` counts via `RequestResolver` + `countStep()`, not `Headroom::for()`, so it fires no events; agents are built by the container, with a clear error for ones needing constructor arguments | CLI inspection should not reach a dashboard; agents like `new SupportAgent($user)` cannot be built from a class name |
 | Calibration storage is cache-only (`calibration.store`, null = default store), kept forever, no database table | Lean core; per-request storage belongs to the companion package |
 | Middleware failures are reported via the SDK's public `StepFailed` event, not a try/catch in the middleware | Streamed steps fail while the caller iterates, after the middleware has returned; `StepFailed` covers normal and streamed failures and is not fired for middleware-blocked steps |
 | Breaches checked in order context window, percent of context, cost; throw mode stops at the first, report mode fires `HeadroomLow` for each | Predictable `TokenLimitExceeded::$limit`; report mode shows everything that was over |

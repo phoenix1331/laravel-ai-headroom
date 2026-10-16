@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - `EnsureHeadroom` agent middleware: counts every generation step before it is sent against `maxPercentOfContext`, `maxCost` and the context window; throws `TokenLimitExceeded` (after firing `RequestBlocked`) or, with `->report()`, fires `HeadroomLow` and lets the request through; reports `TokensUsed` after each step, including streams, and `RequestFailed` when a provider call fails
+- `php artisan headroom:inspect "App\Ai\Agents\SupportAgent" "prompt"` shows tokens per part with percentages, the counting method, context usage and estimated cost, with `--provider`, `--model` and `--json`; exits non-zero when the request does not fit, so it can gate CI
 - `php artisan headroom:calibration` shows each model's samples, correction factor, measured error, margin in use and whether it is active or still learning; `--reset` (with `--model` and `--force`) clears it
 - Self-calibration in use: real usage reported through `TokensUsed` (from the middleware or `Headroom::recordUsage()`) trains each model's correction, and estimates for calibrated models are corrected and reported as `CountMethod::Calibrated` with the measured error as confidence. Native counts are never calibrated
 - `TokensUsed::$countedModel`, the model the request was counted for
