@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Phoenix1331\AiHeadroom\Counting;
 
-use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 use InvalidArgumentException;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Files\Audio;
@@ -20,7 +19,6 @@ use Laravel\Ai\PendingStep;
 use Laravel\Ai\Providers\Tools\ProviderTool;
 use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\ToolResult;
-use Laravel\Ai\Tools\ToolNameResolver;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
 use Phoenix1331\AiHeadroom\Data\Tally;
@@ -157,7 +155,7 @@ class EstimatingCounter implements Counter
         $tokens = 0;
 
         foreach ($tools as $tool) {
-            $tokens += $this->tokens($this->json($this->toolDefinition($tool)));
+            $tokens += $this->tokens($this->json(ToolDefinition::of($tool)));
         }
 
         if ($schema !== null && $schema !== []) {
@@ -165,22 +163,6 @@ class EstimatingCounter implements Counter
         }
 
         return $tokens;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function toolDefinition(Tool|ProviderTool $tool): array
-    {
-        if ($tool instanceof ProviderTool) {
-            return ['name' => ToolNameResolver::resolve($tool)];
-        }
-
-        return [
-            'name' => ToolNameResolver::resolve($tool),
-            'description' => (string) $tool->description(),
-            'parameters' => (new ObjectSchema($tool->schema(new JsonSchemaTypeFactory)))->toSchema(),
-        ];
     }
 
     /**

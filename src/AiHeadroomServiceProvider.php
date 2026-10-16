@@ -12,6 +12,7 @@ use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
 use Phoenix1331\AiHeadroom\Counting\CounterResolver;
 use Phoenix1331\AiHeadroom\Counting\EstimatingCounter;
+use Phoenix1331\AiHeadroom\Counting\NativeCountCache;
 use Phoenix1331\AiHeadroom\Counting\TiktokenTokeniser;
 use Phoenix1331\AiHeadroom\Currency\ConfiguredExchangeRates;
 use Phoenix1331\AiHeadroom\Currency\Contracts\ExchangeRates;
@@ -59,6 +60,18 @@ class AiHeadroomServiceProvider extends ServiceProvider
                 ratios: $config->array('ai-headroom.estimate_ratios'),
                 attachmentTokens: $config->array('ai-headroom.attachment_tokens'),
                 safetyMargin: $config->float('ai-headroom.estimate_safety_margin'),
+            );
+        });
+
+        $this->app->singleton(NativeCountCache::class, function (Application $app): NativeCountCache {
+            $config = $app->make('config');
+            $store = $config->get('ai-headroom.cache.store');
+
+            return new NativeCountCache(
+                cache: $app->make('cache'),
+                enabled: $config->boolean('ai-headroom.cache.enabled'),
+                store: is_string($store) && $store !== '' ? $store : null,
+                ttl: $config->integer('ai-headroom.cache.ttl'),
             );
         });
 

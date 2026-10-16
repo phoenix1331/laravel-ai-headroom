@@ -17,9 +17,9 @@ class AnthropicCounter extends NativeCounter
 {
     private readonly AnthropicCountingGateway $gateway;
 
-    public function __construct(EstimatingCounter $estimator, AiManager $ai, Dispatcher $events)
+    public function __construct(EstimatingCounter $estimator, AiManager $ai, NativeCountCache $cache, Dispatcher $events)
     {
-        parent::__construct($estimator, $ai);
+        parent::__construct($estimator, $ai, $cache);
 
         $this->gateway = new AnthropicCountingGateway($events);
     }

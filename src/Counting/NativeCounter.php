@@ -25,6 +25,7 @@ abstract class NativeCounter implements Counter
     public function __construct(
         private readonly EstimatingCounter $estimator,
         private readonly AiManager $ai,
+        private readonly NativeCountCache $cache,
     ) {}
 
     /**
@@ -34,7 +35,7 @@ abstract class NativeCounter implements Counter
 
     public function count(PendingStep $step): Tally
     {
-        $total = $this->countTotal($this->provider($step), $step);
+        $total = $this->cache->remember(static::class, $step, fn (): int => $this->countTotal($this->provider($step), $step));
         $estimate = $this->estimator->count($step);
 
         $scale = $estimate->total > 0 ? $total / $estimate->total : 0.0;
