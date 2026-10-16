@@ -82,6 +82,8 @@ class AiHeadroomServiceProvider extends ServiceProvider
             estimator: $app->make(EstimatingCounter::class),
             mode: CountingMode::fromConfig($app->make('config')->string('ai-headroom.method', 'auto')),
             counters: $app->make('config')->array('ai-headroom.counters', []),
+            models: $app->make(ModelRegistry::class),
+            escalationBand: $app->make('config')->float('ai-headroom.escalation_band'),
         ));
 
         $this->app->bind(Counter::class, CounterResolver::class);

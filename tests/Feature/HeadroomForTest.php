@@ -8,9 +8,12 @@ use Laravel\Ai\Files\Base64Image;
 use Laravel\Ai\Messages\AssistantMessage;
 use Laravel\Ai\Messages\UserMessage;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
+use Phoenix1331\AiHeadroom\Counting\CounterResolver;
 use Phoenix1331\AiHeadroom\Data\TokenCount;
 use Phoenix1331\AiHeadroom\Enums\CountMethod;
 use Phoenix1331\AiHeadroom\Facades\Headroom;
+use Phoenix1331\AiHeadroom\HeadroomManager;
+use Phoenix1331\AiHeadroom\Models\ModelRegistry;
 use Phoenix1331\AiHeadroom\Tests\Fixtures\Agents\AttributeProviderAgent;
 use Phoenix1331\AiHeadroom\Tests\Fixtures\Agents\ConversationAgent;
 use Phoenix1331\AiHeadroom\Tests\Fixtures\Agents\InstructionsOnlyAgent;
@@ -107,8 +110,8 @@ it('counts history and tools that would be set with withMessages() and withTools
         ->and($count->breakdown()['tools'])->toBeGreaterThan(0);
 });
 
-it('uses the native counter in auto mode when the provider has a key', function (): void {
-    config(['ai-headroom.method' => 'auto']);
+it('uses the native counter in native mode', function (): void {
+    config(['ai-headroom.method' => 'native']);
     Http::fake(['api.anthropic.com/v1/messages/count_tokens' => Http::response(responseFixture('anthropic/count_tokens.json'))]);
 
     $count = Headroom::for(new ToolsAgent, 'Has AB-1 shipped?');
@@ -118,6 +121,36 @@ it('uses the native counter in auto mode when the provider has a key', function 
         ->and($count->breakdown()['tools'])->toBeGreaterThan(0);
 
     Http::assertSent(fn (Request $request): bool => json_decode($request->body(), true)['system'] === 'You can look up orders and search the web.');
+});
+
+it('stays local in auto mode when the request clearly fits', function (): void {
+    config(['ai-headroom.method' => 'auto']);
+
+    $count = Headroom::for(new ToolsAgent, 'Has AB-1 shipped?');
+
+    expect($count->method())->toBe(CountMethod::Estimated);
+    Http::assertNothingSent();
+});
+
+it('escalates to a native count in auto mode when the request is close to the context window', function (): void {
+    $estimate = Headroom::for(new ToolsAgent, 'Has AB-1 shipped?')->total();
+
+    config([
+        'ai-headroom.method' => 'auto',
+        'ai-headroom.models.claude-sonnet-5-5.context_window' => $estimate,
+    ]);
+    app()->forgetInstance(ModelRegistry::class);
+    app()->forgetInstance(CounterResolver::class);
+    app()->forgetInstance(HeadroomManager::class);
+    Headroom::clearResolvedInstances();
+    Http::fake(['api.anthropic.com/v1/messages/count_tokens' => Http::response(['input_tokens' => $estimate - 10])]);
+
+    $count = Headroom::for(new ToolsAgent, 'Has AB-1 shipped?');
+
+    expect($count->method())->toBe(CountMethod::Native)
+        ->and($count->total())->toBe($estimate - 10)
+        ->and($count->fits())->toBeTrue();
+    Http::assertSentCount(1);
 });
 
 it('never calls the model', function (): void {

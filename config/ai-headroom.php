@@ -25,7 +25,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | auto: estimate locally, and fetch a native count only when the estimate
-    |       is within the escalation band of a limit (recommended)
+    |       is within the escalation band of a limit and the provider has a
+    |       native counter and an API key (recommended)
     | native: always use the provider's counting endpoint where one exists
     | estimate: never call a provider; prompt content stays in your app
     |

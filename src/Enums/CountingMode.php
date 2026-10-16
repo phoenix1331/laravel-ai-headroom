@@ -12,7 +12,7 @@ use InvalidArgumentException;
  */
 enum CountingMode: string
 {
-    /** Native where the provider has a counter and an API key, otherwise estimate. */
+    /** Estimate first; native only when the estimate is close to a limit and the provider has a counter and an API key. */
     case Auto = 'auto';
 
     /** Always the provider's counting endpoint where Headroom has a counter for it. */

@@ -9,6 +9,7 @@ use Laravel\Ai\PendingStep;
 use Laravel\Ai\Providers\Provider;
 use LogicException;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
+use Phoenix1331\AiHeadroom\Data\Limits;
 use Phoenix1331\AiHeadroom\Data\Tally;
 use Phoenix1331\AiHeadroom\Enums\CountMethod;
 
@@ -33,7 +34,7 @@ abstract class NativeCounter implements Counter
      */
     abstract protected function countTotal(Provider $provider, PendingStep $step): int;
 
-    public function count(PendingStep $step): Tally
+    public function count(PendingStep $step, ?Limits $limits = null): Tally
     {
         $total = $this->cache->remember(static::class, $step, fn (): int => $this->countTotal($this->provider($step), $step));
         $estimate = $this->estimator->count($step);

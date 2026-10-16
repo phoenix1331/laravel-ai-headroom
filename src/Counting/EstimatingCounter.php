@@ -21,6 +21,7 @@ use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\ToolResult;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
+use Phoenix1331\AiHeadroom\Data\Limits;
 use Phoenix1331\AiHeadroom\Data\Tally;
 use Phoenix1331\AiHeadroom\Enums\CountMethod;
 use Phoenix1331\AiHeadroom\Models\ModelRegistry;
@@ -83,7 +84,7 @@ class EstimatingCounter implements Counter
         }
     }
 
-    public function count(PendingStep $step): Tally
+    public function count(PendingStep $step, ?Limits $limits = null): Tally
     {
         $provider = $this->models->get($step->model)->provider ?? $step->provider;
         $exact = $provider === self::EXACT_PROVIDER;

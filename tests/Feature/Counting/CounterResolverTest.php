@@ -9,9 +9,11 @@ use Phoenix1331\AiHeadroom\Counting\AnthropicCounter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
 use Phoenix1331\AiHeadroom\Counting\CounterResolver;
+use Phoenix1331\AiHeadroom\Counting\EscalatingCounter;
 use Phoenix1331\AiHeadroom\Counting\EstimatingCounter;
 use Phoenix1331\AiHeadroom\Counting\GeminiCounter;
 use Phoenix1331\AiHeadroom\Counting\OpenAiCounter;
+use Phoenix1331\AiHeadroom\Data\Limits;
 use Phoenix1331\AiHeadroom\Data\Tally;
 use Phoenix1331\AiHeadroom\Enums\CountMethod;
 use Phoenix1331\AiHeadroom\Tests\Fixtures\WordTokeniser;
@@ -40,9 +42,21 @@ function resolver(string $method): CounterResolver
     return app(CounterResolver::class);
 }
 
-it('picks the native counter for the step driver in auto and native mode', function (string $method, string $provider, string $counter): void {
-    expect(resolver($method)->counterFor(resolverStep($provider)))->toBeInstanceOf($counter);
-})->with(['auto', 'native'])->with([
+it('picks the native counter for the step driver in native mode', function (string $provider, string $counter): void {
+    expect(resolver('native')->counterFor(resolverStep($provider)))->toBeInstanceOf($counter);
+})->with([
+    'anthropic' => ['anthropic', AnthropicCounter::class],
+    'gemini' => ['gemini', GeminiCounter::class],
+    'openai' => ['openai', OpenAiCounter::class],
+    'custom provider name on the anthropic driver' => ['claude-eu', AnthropicCounter::class],
+]);
+
+it('wraps the native counter in an escalating counter in auto mode', function (string $provider, string $counter): void {
+    $chosen = resolver('auto')->counterFor(resolverStep($provider));
+
+    expect($chosen)->toBeInstanceOf(EscalatingCounter::class)
+        ->and($chosen->native())->toBeInstanceOf($counter);
+})->with([
     'anthropic' => ['anthropic', AnthropicCounter::class],
     'gemini' => ['gemini', GeminiCounter::class],
     'openai' => ['openai', OpenAiCounter::class],
@@ -76,7 +90,7 @@ it('throws in native mode when the provider is unknown to laravel/ai', function 
 it('counts through the chosen counter', function (): void {
     Http::fake(['api.anthropic.com/*' => Http::response(responseFixture('anthropic/count_tokens.json'))]);
 
-    $tally = resolver('auto')->count(resolverStep('anthropic'));
+    $tally = resolver('native')->count(resolverStep('anthropic'));
 
     expect($tally->total)->toBe(2095)
         ->and($tally->method)->toBe(CountMethod::Native);
@@ -103,7 +117,7 @@ it('rejects a registered counter that is not a Counter', function (): void {
 it('uses a counter registered by the app for another driver', function (): void {
     $custom = new class implements Counter
     {
-        public function count(PendingStep $step): Tally
+        public function count(PendingStep $step, ?Limits $limits = null): Tally
         {
             return new Tally(42, ['instructions' => 0, 'history' => 0, 'tools' => 0, 'attachments' => 0, 'prompt' => 42], CountMethod::Native, 0.0);
         }
@@ -111,13 +125,13 @@ it('uses a counter registered by the app for another driver', function (): void 
     app()->instance($custom::class, $custom);
     config(['ai-headroom.counters.mistral' => $custom::class]);
 
-    expect(resolver('auto')->count(resolverStep('mistral'))->total)->toBe(42);
+    expect(resolver('native')->count(resolverStep('mistral'))->total)->toBe(42);
 });
 
 it('rejects a counter class the container resolves to something else', function (): void {
     $custom = new class implements Counter
     {
-        public function count(PendingStep $step): Tally
+        public function count(PendingStep $step, ?Limits $limits = null): Tally
         {
             throw new RuntimeException('unused');
         }

@@ -11,12 +11,15 @@ use Laravel\Ai\PendingStep;
 use Laravel\Ai\Providers\Provider;
 use LogicException;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
+use Phoenix1331\AiHeadroom\Data\Limits;
 use Phoenix1331\AiHeadroom\Data\Tally;
 use Phoenix1331\AiHeadroom\Enums\CountingMode;
+use Phoenix1331\AiHeadroom\Models\ModelRegistry;
 
 /**
  * Picks the counter for each step: a native counter registered for the step's
- * laravel/ai driver, or the local estimate, depending on the counting mode.
+ * laravel/ai driver, the local estimate, or (in auto mode) an escalating
+ * counter that estimates first and goes native only near a limit.
  */
 class CounterResolver implements Counter
 {
@@ -32,6 +35,8 @@ class CounterResolver implements Counter
         private readonly EstimatingCounter $estimator,
         private readonly CountingMode $mode,
         array $counters,
+        private readonly ModelRegistry $models,
+        private readonly float $escalationBand,
     ) {
         foreach ($counters as $driver => $class) {
             if (! is_string($class) || ! is_subclass_of($class, Counter::class)) {
@@ -42,9 +47,9 @@ class CounterResolver implements Counter
         }
     }
 
-    public function count(PendingStep $step): Tally
+    public function count(PendingStep $step, ?Limits $limits = null): Tally
     {
-        return $this->counterFor($step)->count($step);
+        return $this->counterFor($step)->count($step, $limits);
     }
 
     public function counterFor(PendingStep $step): Counter
@@ -73,6 +78,10 @@ class CounterResolver implements Counter
 
         if (! $counter instanceof Counter) {
             throw new LogicException("The Headroom counter [{$class}] did not resolve to a ".Counter::class.'.');
+        }
+
+        if ($this->mode === CountingMode::Auto) {
+            return new EscalatingCounter($this->estimator, $counter, $this->models, $this->escalationBand);
         }
 
         return $counter;

@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Anthropic native counter using `POST /v1/messages/count_tokens` with the provider's laravel/ai credentials and base URL
 - Gemini native counter using `POST models/{model}:countTokens` with a `generateContentRequest` built from the step
 - OpenAI native counter using `POST /v1/responses/input_tokens` with the provider's laravel/ai credentials and base URL
+- `auto` counting (the default) estimates first and only fetches a native count when the estimate is within `escalation_band` of a limit, so clear passes and clear fails never call the provider
 - `method` config (`auto`, `native`, `estimate`) and a `counters` map from laravel/ai driver to counter class, so apps can register counters for other providers
 - Opt-in cache for native counts (`HEADROOM_CACHE`, `HEADROOM_CACHE_TTL`, `HEADROOM_CACHE_STORE`), keyed by a SHA-256 fingerprint of the request; stores the hash and count only, never content
 - Full `config/ai-headroom.php`: default model, counting method, safety margins, escalation band, tokeniser cache path, calibration, cache, currency and middleware defaults
