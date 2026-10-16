@@ -103,6 +103,7 @@ class HeadroomManager
             agent: $count->agent(),
             provider: $meta->provider ?? $count->provider(),
             model: $model,
+            countedModel: $count->model(),
             inputTokens: $usage->inputTokens,
             outputTokens: $usage->outputTokens,
             cacheReadTokens: $usage->cacheReadInputTokens,

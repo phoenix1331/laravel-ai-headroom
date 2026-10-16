@@ -22,6 +22,8 @@ use Phoenix1331\AiHeadroom\Currency\ConfiguredExchangeRates;
 use Phoenix1331\AiHeadroom\Currency\Contracts\ExchangeRates;
 use Phoenix1331\AiHeadroom\Enums\CountingMode;
 use Phoenix1331\AiHeadroom\Enums\Currency;
+use Phoenix1331\AiHeadroom\Events\TokensUsed;
+use Phoenix1331\AiHeadroom\Listeners\CalibrateFromUsage;
 use Phoenix1331\AiHeadroom\Listeners\ReportFailedRequests;
 use Phoenix1331\AiHeadroom\Models\ModelRegistry;
 use Phoenix1331\AiHeadroom\Resolving\RequestResolver;
@@ -67,6 +69,7 @@ class AiHeadroomServiceProvider extends ServiceProvider
                 ratios: $config->array('ai-headroom.estimate_ratios'),
                 attachmentTokens: $config->array('ai-headroom.attachment_tokens'),
                 safetyMargin: $config->float('ai-headroom.estimate_safety_margin'),
+                calibrator: $app->make(Calibrator::class),
             );
         });
 
@@ -130,6 +133,7 @@ class AiHeadroomServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app->make('events')->listen(StepFailed::class, ReportFailedRequests::class);
+        $this->app->make('events')->listen(TokensUsed::class, CalibrateFromUsage::class);
 
         $this->publishes([
             __DIR__.'/../config/ai-headroom.php' => config_path('ai-headroom.php'),

@@ -19,6 +19,7 @@ use Laravel\Ai\PendingStep;
 use Laravel\Ai\Providers\Tools\ProviderTool;
 use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\ToolResult;
+use Phoenix1331\AiHeadroom\Calibration\Calibrator;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
 use Phoenix1331\AiHeadroom\Data\Limits;
@@ -30,6 +31,9 @@ use Phoenix1331\AiHeadroom\Models\ModelRegistry;
  * Counts locally with OpenAI's o200k tokeniser. OpenAI models are counted
  * directly; other providers tokenise differently, so their counts are scaled
  * by a per-provider ratio and padded with the safety margin.
+ *
+ * Once the calibrator has enough real usage for a model, that base estimate is
+ * corrected by the learned factor and margin and marked Calibrated.
  */
 class EstimatingCounter implements Counter
 {
@@ -62,6 +66,7 @@ class EstimatingCounter implements Counter
         array $ratios,
         array $attachmentTokens,
         private readonly float $safetyMargin,
+        private readonly ?Calibrator $calibrator = null,
     ) {
         foreach ($ratios as $provider => $ratio) {
             if (! is_numeric($ratio) || (float) $ratio <= 0) {
@@ -106,12 +111,23 @@ class EstimatingCounter implements Counter
 
         $overhead = $this->scaled(self::MESSAGE_OVERHEAD * (count($step->messages) + 1), $scale);
 
+        $total = array_sum($breakdown) + $overhead;
+        $method = CountMethod::Estimated;
         $confidence = $exact ? self::EXACT_CONFIDENCE : $this->safetyMargin;
 
+        $correction = $this->calibrator?->correctionFor($step->model);
+
+        if ($correction !== null) {
+            $breakdown = array_map($correction->apply(...), $breakdown);
+            $total = $correction->apply($total);
+            $method = CountMethod::Calibrated;
+            $confidence = min(1.0, $correction->error);
+        }
+
         return new Tally(
-            total: array_sum($breakdown) + $overhead,
+            total: $total,
             breakdown: $breakdown,
-            method: CountMethod::Estimated,
+            method: $method,
             confidence: $attachments > 0 ? max($confidence, self::ATTACHMENT_CONFIDENCE) : $confidence,
         );
     }

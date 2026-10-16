@@ -15,6 +15,8 @@ use Laravel\Ai\PendingStep;
 use Laravel\Ai\Providers\Tools\WebSearch;
 use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\ToolResult;
+use Phoenix1331\AiHeadroom\Calibration\CalibrationStore;
+use Phoenix1331\AiHeadroom\Calibration\Calibrator;
 use Phoenix1331\AiHeadroom\Counting\EstimatingCounter;
 use Phoenix1331\AiHeadroom\Currency\ConfiguredExchangeRates;
 use Phoenix1331\AiHeadroom\Enums\CountMethod;
@@ -23,7 +25,7 @@ use Phoenix1331\AiHeadroom\Models\ModelRegistry;
 use Phoenix1331\AiHeadroom\Tests\Fixtures\LookupOrderTool;
 use Phoenix1331\AiHeadroom\Tests\Fixtures\WordTokeniser;
 
-function estimator(float $margin = 0.10, ?array $ratios = null, ?array $attachments = null): EstimatingCounter
+function estimator(float $margin = 0.10, ?array $ratios = null, ?array $attachments = null, ?Calibrator $calibrator = null): EstimatingCounter
 {
     $spec = ['context_window' => 100_000, 'max_output_tokens' => 1_000, 'input_price' => 1, 'output_price' => 1];
 
@@ -42,6 +44,7 @@ function estimator(float $margin = 0.10, ?array $ratios = null, ?array $attachme
         ratios: $ratios ?? ['openai' => 1.0, 'anthropic' => 2.0, 'default' => 3.0],
         attachmentTokens: $attachments ?? ['image' => 100, 'document' => 500, 'other' => 50],
         safetyMargin: $margin,
+        calibrator: $calibrator,
     );
 }
 
@@ -193,3 +196,28 @@ it('rejects invalid configuration', function (Closure $make, string $message): v
     'negative attachment' => [fn () => estimator(attachments: ['image' => -1]), 'attachment tokens for [image]'],
     'negative margin' => [fn () => estimator(margin: -0.1), 'safety margin cannot be negative'],
 ]);
+
+it('applies a calibration correction to every part and the total, and marks it calibrated', function (): void {
+    $calibrator = new Calibrator(app(CalibrationStore::class), true, 1, 0.5, 0.1, 0.02);
+    $calibrator->observe('gpt-test', 100, 80);
+
+    $plain = estimator()->count(step('gpt-test', [new UserMessage('where is my refund')], instructions: 'you are a support agent'));
+    $tally = estimator(calibrator: $calibrator)->count(step('gpt-test', [new UserMessage('where is my refund')], instructions: 'you are a support agent'));
+
+    $correction = $calibrator->correctionFor('gpt-test');
+
+    expect($tally->method)->toBe(CountMethod::Calibrated)
+        ->and($tally->confidence)->toBe($correction->error)
+        ->and($tally->total)->toBe($correction->apply($plain->total))
+        ->and($tally->breakdown['instructions'])->toBe($correction->apply($plain->breakdown['instructions']));
+});
+
+it('keeps attachment counts marked approximate after calibration', function (): void {
+    $calibrator = new Calibrator(app(CalibrationStore::class), true, 1, 0.5, 0.1, 0.02);
+    $calibrator->observe('gpt-test', 100, 99);
+
+    $tally = estimator(calibrator: $calibrator)->count(step('gpt-test', [new UserMessage('see attached', [new Base64Image(base64_encode('png'), 'image/png')])]));
+
+    expect($tally->method)->toBe(CountMethod::Calibrated)
+        ->and($tally->confidence)->toBe(0.5);
+});

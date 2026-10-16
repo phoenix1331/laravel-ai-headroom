@@ -48,6 +48,7 @@ Fired after the provider responds: by the `EnsureHeadroom` middleware for every 
 | `agent` | `?class-string` | The agent class |
 | `provider` | `?string` | Provider that actually answered; can differ from the counted one after failover |
 | `model` | `string` | Model that actually answered, as the provider reports it |
+| `countedModel` | `string` | Model the request was counted for; differs from `model` after failover, or when the provider reports a dated snapshot |
 | `inputTokens` | `int` | Actual input tokens, including cache reads and writes |
 | `outputTokens` | `int` | Actual output tokens, including reasoning |
 | `cacheReadTokens` | `?int` | Input tokens read from a prompt cache, when reported |

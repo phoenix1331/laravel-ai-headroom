@@ -12,8 +12,8 @@ use Phoenix1331\AiHeadroom\Enums\CountMethod;
  * A counted request completed and the provider reported its usage. Public API
  * covered by SemVer. Never contains prompt or response text.
  *
- * $provider and $model are what actually answered, which can differ from the
- * counted ones after failover. $countMethod and $estimatedInputTokens repeat
+ * $provider and $model are what actually answered, which can differ from
+ * $countedModel after failover. $countMethod and $estimatedInputTokens repeat
  * the pre-flight count so consumers (and calibration) can measure its error.
  */
 final readonly class TokensUsed
@@ -30,6 +30,7 @@ final readonly class TokensUsed
         public ?string $agent,
         public ?string $provider,
         public string $model,
+        public string $countedModel,
         public int $inputTokens,
         public int $outputTokens,
         public ?int $cacheReadTokens,

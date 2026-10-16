@@ -110,6 +110,7 @@ it('reports the provider and model that actually answered after failover', funct
 
     Event::assertDispatched(TokensUsed::class, fn (TokensUsed $event): bool => $event->provider === 'openai'
         && $event->model === 'gpt-6-luna'
+        && $event->countedModel === 'claude-sonnet-5-5'
         && $event->cost->total() === 200_000 * 0.10 / 1_000_000);
 });
 
