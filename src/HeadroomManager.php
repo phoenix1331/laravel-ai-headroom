@@ -15,11 +15,14 @@ use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Messages\UserMessage;
 use Laravel\Ai\PendingStep;
 use Laravel\Ai\Responses\AgentResponse;
+use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\Step;
+use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StreamableAgentResponse;
 use Laravel\Ai\Responses\StreamedAgentResponse;
 use Phoenix1331\AiHeadroom\Context\ContextResolver;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
+use Phoenix1331\AiHeadroom\Data\Limits;
 use Phoenix1331\AiHeadroom\Data\Tally;
 use Phoenix1331\AiHeadroom\Data\TokenCount;
 use Phoenix1331\AiHeadroom\Events\TokensCounted;
@@ -60,20 +63,57 @@ class HeadroomManager
         ?iterable $messages = null,
         ?iterable $tools = null,
     ): TokenCount {
-        $step = $this->resolver->resolve($agent, $prompt, $attachments, $provider, $model, $messages, $tools);
-
-        $count = $this->toTokenCount(
-            $this->counter->count($step),
-            $step->model,
-            $step->options?->maxTokens,
-            provider: $step->provider,
-            agent: $agent::class,
-            context: $this->context->resolve($agent),
-        );
+        $count = $this->countStep($this->resolver->resolve($agent, $prompt, $attachments, $provider, $model, $messages, $tools), null, $agent);
 
         $this->events->dispatch(TokensCounted::from($count));
 
         return $count;
+    }
+
+    /**
+     * Count a resolved step, as the middleware sees it, with the agent's context tags.
+     * Fires no events; callers decide what the count means.
+     */
+    public function countStep(PendingStep $step, ?Limits $limits, ?Agent $agent): TokenCount
+    {
+        return $this->toTokenCount(
+            $this->counter->count($step, $limits),
+            $step->model,
+            $step->options?->maxTokens,
+            provider: $step->provider,
+            agent: $agent === null ? null : $agent::class,
+            invocationId: $step->invocationId,
+            context: $this->context->resolve($agent),
+        );
+    }
+
+    /**
+     * Build TokensUsed for a counted request from the usage and metadata the provider reported.
+     */
+    public function usage(TokenCount $count, TextUsage $usage, Meta $meta, ?string $invocationId, bool $streamed): TokensUsed
+    {
+        $model = $meta->model ?? $count->model();
+
+        // A provider can report a dated snapshot of the model; price it as the counted model if the registry does not know it.
+        $pricedAs = $this->models->has($model) ? $model : $count->model();
+
+        return new TokensUsed(
+            requestId: $count->requestId(),
+            invocationId: $count->invocationId() ?? $invocationId,
+            agent: $count->agent(),
+            provider: $meta->provider ?? $count->provider(),
+            model: $model,
+            inputTokens: $usage->inputTokens,
+            outputTokens: $usage->outputTokens,
+            cacheReadTokens: $usage->cacheReadInputTokens,
+            cacheWriteTokens: $usage->cacheWriteInputTokens,
+            cost: $this->models->actualCostFor($pricedAs, $usage->inputTokens, $usage->outputTokens, $usage->cacheReadInputTokens, $usage->cacheWriteInputTokens),
+            streamed: $streamed,
+            countMethod: $count->method(),
+            estimatedInputTokens: $count->total(),
+            context: $count->context(),
+            occurredAt: CarbonImmutable::now(),
+        );
     }
 
     /**
@@ -186,29 +226,12 @@ class HeadroomManager
         /** @var Step|null $step */
         $step = $response->steps->first();
 
-        $usage = $step === null ? $response->usage : $step->usage;
-        $meta = $step === null ? $response->meta : $step->meta;
-        $model = $meta->model ?? $count->model();
-
-        // A provider can report a dated snapshot of the model; price it as the counted model if the registry does not know it.
-        $pricedAs = $this->models->has($model) ? $model : $count->model();
-
-        $this->events->dispatch(new TokensUsed(
-            requestId: $count->requestId(),
-            invocationId: $count->invocationId() ?? $response->invocationId,
-            agent: $count->agent(),
-            provider: $meta->provider ?? $count->provider(),
-            model: $model,
-            inputTokens: $usage->inputTokens,
-            outputTokens: $usage->outputTokens,
-            cacheReadTokens: $usage->cacheReadInputTokens,
-            cacheWriteTokens: $usage->cacheWriteInputTokens,
-            cost: $this->models->actualCostFor($pricedAs, $usage->inputTokens, $usage->outputTokens, $usage->cacheReadInputTokens, $usage->cacheWriteInputTokens),
-            streamed: $streamed,
-            countMethod: $count->method(),
-            estimatedInputTokens: $count->total(),
-            context: $count->context(),
-            occurredAt: CarbonImmutable::now(),
+        $this->events->dispatch($this->usage(
+            $count,
+            $step === null ? $response->usage : $step->usage,
+            $step === null ? $response->meta : $step->meta,
+            $response->invocationId,
+            $streamed,
         ));
     }
 

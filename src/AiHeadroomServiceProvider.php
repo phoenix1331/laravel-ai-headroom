@@ -8,6 +8,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use Laravel\Ai\AiManager;
+use Laravel\Ai\Events\StepFailed;
 use Phoenix1331\AiHeadroom\Context\ContextResolver;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
@@ -19,8 +20,10 @@ use Phoenix1331\AiHeadroom\Currency\ConfiguredExchangeRates;
 use Phoenix1331\AiHeadroom\Currency\Contracts\ExchangeRates;
 use Phoenix1331\AiHeadroom\Enums\CountingMode;
 use Phoenix1331\AiHeadroom\Enums\Currency;
+use Phoenix1331\AiHeadroom\Listeners\ReportFailedRequests;
 use Phoenix1331\AiHeadroom\Models\ModelRegistry;
 use Phoenix1331\AiHeadroom\Resolving\RequestResolver;
+use Phoenix1331\AiHeadroom\Tracking\RequestTracker;
 
 class AiHeadroomServiceProvider extends ServiceProvider
 {
@@ -89,6 +92,8 @@ class AiHeadroomServiceProvider extends ServiceProvider
 
         $this->app->bind(Counter::class, CounterResolver::class);
 
+        $this->app->singleton(RequestTracker::class);
+
         $this->app->singleton(ContextResolver::class, fn (Application $app): ContextResolver => new ContextResolver($app->make('log')));
 
         $this->app->singleton(HeadroomManager::class, fn (Application $app): HeadroomManager => new HeadroomManager(
@@ -103,6 +108,8 @@ class AiHeadroomServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->app->make('events')->listen(StepFailed::class, ReportFailedRequests::class);
+
         $this->publishes([
             __DIR__.'/../config/ai-headroom.php' => config_path('ai-headroom.php'),
         ], 'ai-headroom-config');

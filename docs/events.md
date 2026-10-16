@@ -11,7 +11,9 @@ All events are `final readonly` classes in `Phoenix1331\AiHeadroom\Events` with 
 | `requestId` | A ULID for one counted provider call. `TokensCounted` and the events that follow it (`TokensUsed`, `HeadroomLow`, `RequestBlocked`, `RequestFailed`) share it. Also on `TokenCount::requestId()` |
 | `invocationId` | laravel/ai's ID for an agent run. A run with tool calls makes several provider calls (steps), each with its own `requestId` and the same `invocationId`. Null when Headroom cannot know it yet, such as `TokensCounted` from `Headroom::for()` |
 
-A `TokensCounted` with no later `TokensUsed` or `RequestFailed` is a stream the client abandoned before it completed. Providers report usage only when a stream finishes.
+A `TokensCounted` with no later `TokensUsed`, `RequestFailed` or `RequestBlocked` is a stream the client abandoned before it completed. Providers report usage only when a stream finishes.
+
+With the middleware, each failover attempt is counted separately: a failed attempt has `TokensCounted` then `RequestFailed`, and the provider that answered has its own `TokensCounted` then `TokensUsed`.
 
 ## Events
 
@@ -61,7 +63,7 @@ Fired after the provider responds: by the `EnsureHeadroom` middleware for every 
 
 ### `HeadroomLow`
 
-Fired by the `EnsureHeadroom` middleware in `report` mode when a request reaches a limit and is allowed through.
+Fired by the `EnsureHeadroom` middleware in `report` mode, once per limit breached, when a request goes over a limit and is allowed through. Limits are checked in the order context window, percent of context, cost.
 
 | Property | Type | Description |
 |---|---|---|
@@ -75,7 +77,7 @@ Fired by the `EnsureHeadroom` middleware in `report` mode when a request reaches
 
 ### `RequestBlocked`
 
-Fired by the `EnsureHeadroom` middleware in `throw` mode just before `TokenLimitExceeded` is thrown, so blocks are recorded even when your app catches the exception.
+Fired by the `EnsureHeadroom` middleware in `throw` mode just before `TokenLimitExceeded` is thrown, so blocks are recorded even when your app catches the exception. Only the first breached limit is reported (context window, then percent of context, then cost).
 
 | Property | Type | Description |
 |---|---|---|
@@ -89,7 +91,7 @@ Fired by the `EnsureHeadroom` middleware in `throw` mode just before `TokenLimit
 
 ### `RequestFailed`
 
-Fired by the `EnsureHeadroom` middleware when a counted provider call throws.
+Fired when a provider call counted by the `EnsureHeadroom` middleware throws, for normal and streamed calls alike (Headroom listens to laravel/ai's `StepFailed` event, since a stream fails while it is read, after the middleware has returned). Not fired for requests the middleware blocked: those fire `RequestBlocked`.
 
 | Property | Type | Description |
 |---|---|---|

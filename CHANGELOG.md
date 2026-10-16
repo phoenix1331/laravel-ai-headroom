@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `EnsureHeadroom` agent middleware: counts every generation step before it is sent against `maxPercentOfContext`, `maxCost` and the context window; throws `TokenLimitExceeded` (after firing `RequestBlocked`) or, with `->report()`, fires `HeadroomLow` and lets the request through; reports `TokensUsed` after each step, including streams, and `RequestFailed` when a provider call fails
 - Events as public API for recording every request without Headroom storing anything: `TokensCounted`, `TokensUsed`, `HeadroomLow`, `RequestBlocked` and `RequestFailed`, linked by a ULID `TokenCount::requestId()` and laravel/ai's invocation ID, and never carrying prompt, response or error text (see `docs/events.md`)
 - `Headroom::recordUsage($count, $response)` to report actual usage for requests counted with `Headroom::for()`, for normal and streamed responses
 - `Headroom::resolveContextUsing()` to tag requests with scalar context such as `tenant_id`; failures log a warning and never fail a request

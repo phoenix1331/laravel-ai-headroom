@@ -20,6 +20,8 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | `src/Data/`, `src/Enums/` | `TokenCount` (with `requestId`, provider, agent, invocationId, context), `Tally` (counter output: figures only), `Limits`, `Cost` (with `approximate`), `ModelSpec`, `CountMethod`, `CountingMode`, `Currency`, `LimitType` |
 | `src/Events/` | Public API (SemVer): `TokensCounted`, `TokensUsed`, `HeadroomLow`, `RequestBlocked`, `RequestFailed`; final readonly, typed, no text. Reference: `docs/events.md` |
 | `src/Exceptions/TokenLimitExceeded.php` | Carries `TokenCount`, `LimitType`, limit and actual values; message is figures only |
+| `src/Middleware/EnsureHeadroom.php` | Agent step middleware: counts each `PendingStep` with its limits, fires `TokensCounted`, then `RequestBlocked` + `TokenLimitExceeded` (throw) or `HeadroomLow` per breach (report), tracks the step, and fires `TokensUsed` from `StepResult::then()` |
+| `src/Tracking/RequestTracker.php`, `src/Listeners/ReportFailedRequests.php` | In-process map of in-flight steps (invocationId + step number -> `TokenCount`, capped at 1,000); listener turns the SDK's `StepFailed` into `RequestFailed` |
 | `src/Context/ContextResolver.php` | `Headroom::resolveContextUsing()` callback; scalar tags only, logs and continues on failure |
 | `src/Currency/` | `Contracts\ExchangeRates` and `ConfiguredExchangeRates` (fixed rates per 1 USD from config) |
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
@@ -76,6 +78,10 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | `TokenCount` carries requestId, provider, agent, invocationId and context tags | `recordUsage()` can build `TokensUsed` from the count alone, even in another process |
 | `recordUsage()` reports the run's first step usage and meta; prices an unrecognised reported model (dated snapshot) as the counted model | Matches what `Headroom::for()` counted; avoids fallback pricing for snapshot names |
 | Actual cost: uncached input + cache reads/writes at their own prices + output; missing cache price prices those tokens as input and sets `Cost::approximate` | Never silently wrong; Anthropic cache writes use the 5-minute rate (TTL not reported) |
+| Middleware failures are reported via the SDK's public `StepFailed` event, not a try/catch in the middleware | Streamed steps fail while the caller iterates, after the middleware has returned; `StepFailed` covers normal and streamed failures and is not fired for middleware-blocked steps |
+| Breaches checked in order context window, percent of context, cost; throw mode stops at the first, report mode fires `HeadroomLow` for each | Predictable `TokenLimitExceeded::$limit`; report mode shows everything that was over |
+| Percent-of-context breaches use the unrounded percentage | `percentUsed()` is rounded to 2 places for display and would let 80.004% pass an 80% limit |
+| Middleware limits/mode default from `ai-headroom.middleware` config; `->report()` returns a new instance | Agents declare `new EnsureHeadroom(...)` inline; services are resolved from the container at handle time |
 | Non-scalar context tags are dropped with a warning rather than thrown | "Rejected" while honouring "tagging never fails a request" |
 | Event reference lives in `docs/events.md` until the README task | RULES.md keeps the README for the final task |
 | Failover lists resolve to their first provider; approval-decision input is rejected; `withMessages()`/`withTools()` state must be passed as `messages:`/`tools:` | The SDK keeps that state private and flushes it on read; decisions resume a run rather than start one |
