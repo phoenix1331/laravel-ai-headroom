@@ -65,6 +65,9 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | Native counters subclass the SDK gateways to reuse their protected request-body builders | Exact provider payloads without reimplementing serialisation; protected methods are outside semver, so the weekly `sdk-latest` CI job watches them |
 | Gemini native counting maps to `generateContentRequest` itself | The SDK's Gemini gateway uses the Interactions API, whose body `countTokens` does not accept |
 | Tokeniser: `yethee/tiktoken` with a persistent vocab cache path | MIT, maintained, o200k support, ~13 ms per 100 KB; downloads vocab files on first use |
+| `TokenCount::total()` is stored separately from the breakdown, not summed | Native endpoints return one total including message/tool overhead that belongs to no single part |
+| `TokenCount::remaining()` added beyond the brief's API | It is literally the headroom; negative when the request overflows |
+| `Cost` rounds amounts to 8 decimal places | Removes float noise (`0.15 + 0.96`) while keeping per-token precision on cheap models |
 | No Docker: everything runs on the host PHP (WSL), deliberately overriding the default Docker/FrankenPHP/MySQL stack | A package has nothing to serve and no database; contributors expect `composer install && composer test`, CI runs on GitHub's PHP runners, and a container only duplicated the host runtime |
 | `composer.lock` gitignored | Libraries should not pin consumers' dependencies |
 | No Makefile | With Docker gone every target was a one-line wrapper; Composer scripts are the PHP package convention |

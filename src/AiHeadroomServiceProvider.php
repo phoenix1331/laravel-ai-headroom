@@ -15,10 +15,6 @@ class AiHeadroomServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (! $this->app->runningInConsole()) {
-            return;
-        }
-
         $this->publishes([
             __DIR__.'/../config/ai-headroom.php' => config_path('ai-headroom.php'),
         ], 'ai-headroom-config');
