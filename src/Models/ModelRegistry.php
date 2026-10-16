@@ -21,6 +21,9 @@ class ModelRegistry
 
     private ModelSpec $fallback;
 
+    /** @var array<string, 'shipped'|'overridden'|'app'> */
+    private array $sources = [];
+
     /**
      * @param  array<array-key, mixed>  $defaults  Shipped models, keyed by model name.
      * @param  array<array-key, mixed>  $overrides  App models; each field given replaces the shipped field whole (including `tiers`).
@@ -34,7 +37,13 @@ class ModelRegistry
         private readonly ExchangeRates $exchangeRates,
         private readonly ?string $lastChecked = null,
     ) {
+        foreach (array_keys($defaults) as $name) {
+            $this->sources[(string) $name] = 'shipped';
+        }
+
         foreach ($overrides as $name => $attributes) {
+            $this->sources[(string) $name] = isset($defaults[$name]) ? 'overridden' : 'app';
+
             $defaults[$name] = is_array($attributes) && is_array($defaults[$name] ?? null)
                 ? array_replace($defaults[$name], $attributes)
                 : $attributes;
@@ -125,6 +134,36 @@ class ModelRegistry
     public function actualCostFor(string $model, int $inputTokens, int $outputTokens, ?int $cacheReadTokens = null, ?int $cacheWriteTokens = null): Cost
     {
         return $this->inConfiguredCurrency($this->get($model)->actualCostFor($inputTokens, $outputTokens, $cacheReadTokens, $cacheWriteTokens));
+    }
+
+    /**
+     * Where a model's figures come from: shipped with Headroom, shipped but overridden by the app, or added by the app.
+     *
+     * @return 'shipped'|'overridden'|'app'|null
+     */
+    public function source(string $model): ?string
+    {
+        return $this->sources[$model] ?? null;
+    }
+
+    /**
+     * The values used for unknown models.
+     */
+    public function fallback(): ModelSpec
+    {
+        return $this->fallback;
+    }
+
+    /**
+     * A USD price in the configured currency.
+     */
+    public function priceInCurrency(float $usd): float
+    {
+        if ($this->currency === Currency::Usd) {
+            return $usd;
+        }
+
+        return $usd * $this->exchangeRates->rate(Currency::Usd, $this->currency);
     }
 
     private function inConfiguredCurrency(Cost $cost): Cost

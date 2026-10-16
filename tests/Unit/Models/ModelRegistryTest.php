@@ -159,3 +159,21 @@ it('converts actual cost into the configured currency', function (): void {
     expect($cost->currency)->toBe(Currency::Gbp)
         ->and($cost->total())->toBe(0.225);
 });
+
+it('knows where each model came from', function (): void {
+    $registry = registry([
+        'shipped-model' => ['input_price' => 2.0],
+        'my-model' => ['context_window' => 1, 'max_output_tokens' => 1, 'input_price' => 1, 'output_price' => 1],
+    ]);
+
+    expect($registry->source('shipped-model'))->toBe('overridden')
+        ->and($registry->source('my-model'))->toBe('app')
+        ->and(registry()->source('shipped-model'))->toBe('shipped')
+        ->and(registry()->source('mystery'))->toBeNull();
+});
+
+it('exposes the fallback and converts prices into the configured currency', function (): void {
+    expect(registry()->fallback()->contextWindow)->toBe(128_000)
+        ->and(registry()->priceInCurrency(10.0))->toBe(10.0)
+        ->and(registry(currency: Currency::Gbp)->priceInCurrency(10.0))->toBe(7.5);
+});
