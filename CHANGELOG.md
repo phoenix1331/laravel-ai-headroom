@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-16
+
+First release.
+
 ### Added
 
 - `EnsureHeadroom` agent middleware: counts every generation step before it is sent against `maxPercentOfContext`, `maxCost` and the context window; throws `TokenLimitExceeded` (after firing `RequestBlocked`) or, with `->report()`, fires `HeadroomLow` and lets the request through; reports `TokensUsed` after each step, including streams, and `RequestFailed` when a provider call fails
@@ -37,3 +41,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `method` config (`auto`, `native`, `estimate`) and a `counters` map from laravel/ai driver to counter class, so apps can register counters for other providers
 - Opt-in cache for native counts (`HEADROOM_CACHE`, `HEADROOM_CACHE_TTL`, `HEADROOM_CACHE_STORE`), keyed by a SHA-256 fingerprint of the request; stores the hash and count only, never content
 - Full `config/ai-headroom.php`: default model, counting method, safety margins, escalation band, tokeniser cache path, calibration, cache, currency and middleware defaults
+
+[Unreleased]: https://github.com/phoenix1331/laravel-ai-headroom/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/phoenix1331/laravel-ai-headroom/releases/tag/v0.1.0
