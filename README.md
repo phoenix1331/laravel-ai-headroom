@@ -9,6 +9,8 @@ Token counting, context limits and cost guards for the [Laravel AI SDK](https://
 [![Packagist](https://img.shields.io/packagist/v/phoenix1331/laravel-ai-headroom.svg)](https://packagist.org/packages/phoenix1331/laravel-ai-headroom)
 [![Licence](https://img.shields.io/packagist/l/phoenix1331/laravel-ai-headroom.svg)](LICENSE)
 
+![headroom:inspect showing a support agent's request: history is 90.5% of 20,360 tokens, with context usage and estimated cost](docs/headroom-inspect.gif)
+
 ```php
 $count = Headroom::for(new SupportAgent($user), 'Where is my refund?');
 
