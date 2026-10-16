@@ -7,12 +7,16 @@ namespace Phoenix1331\AiHeadroom;
 use Illuminate\Contracts\Config\Repository;
 use InvalidArgumentException;
 use Laravel\Ai\Ai;
+use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\AgentInput;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Messages\UserMessage;
 use Laravel\Ai\PendingStep;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Data\Tally;
 use Phoenix1331\AiHeadroom\Data\TokenCount;
 use Phoenix1331\AiHeadroom\Models\ModelRegistry;
+use Phoenix1331\AiHeadroom\Resolving\RequestResolver;
 
 class HeadroomManager
 {
@@ -20,7 +24,34 @@ class HeadroomManager
         private readonly Counter $counter,
         private readonly ModelRegistry $models,
         private readonly Repository $config,
+        private readonly RequestResolver $resolver,
     ) {}
+
+    /**
+     * Count the whole request the agent would send for the prompt: instructions,
+     * history, tools, attachments and the prompt itself, without calling the model.
+     *
+     * Arguments mirror $agent->prompt(). History added with withMessages() and tools
+     * set with withTools() are private to the agent, so pass them as $messages and $tools.
+     *
+     * @param  array<int, mixed>  $attachments
+     * @param  Lab|array<array-key, mixed>|string|null  $provider
+     * @param  iterable<int, mixed>|null  $messages
+     * @param  iterable<int, mixed>|null  $tools
+     */
+    public function for(
+        Agent $agent,
+        AgentInput|UserMessage|string $prompt,
+        array $attachments = [],
+        Lab|array|string|null $provider = null,
+        ?string $model = null,
+        ?iterable $messages = null,
+        ?iterable $tools = null,
+    ): TokenCount {
+        $step = $this->resolver->resolve($agent, $prompt, $attachments, $provider, $model, $messages, $tools);
+
+        return $this->toTokenCount($this->counter->count($step), $step->model, $step->options?->maxTokens);
+    }
 
     /**
      * Count plain text sent as a single user message to the model.

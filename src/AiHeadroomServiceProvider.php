@@ -19,6 +19,7 @@ use Phoenix1331\AiHeadroom\Currency\Contracts\ExchangeRates;
 use Phoenix1331\AiHeadroom\Enums\CountingMode;
 use Phoenix1331\AiHeadroom\Enums\Currency;
 use Phoenix1331\AiHeadroom\Models\ModelRegistry;
+use Phoenix1331\AiHeadroom\Resolving\RequestResolver;
 
 class AiHeadroomServiceProvider extends ServiceProvider
 {
@@ -89,6 +90,7 @@ class AiHeadroomServiceProvider extends ServiceProvider
             counter: $app->make(Counter::class),
             models: $app->make(ModelRegistry::class),
             config: $app->make('config'),
+            resolver: $app->make(RequestResolver::class),
         ));
     }
 

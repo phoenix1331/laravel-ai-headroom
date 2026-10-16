@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `models` config key to override fields of a shipped model or add your own, and a cautious `fallback_model` for unknown models
 - Costs in USD or GBP via the `currency` config, converted from USD at configurable `exchange_rates` (`HEADROOM_CURRENCY`, `HEADROOM_RATE_GBP`)
 - `Headroom` facade and `Headroom::count($text, model: ...)` for plain text, defaulting to `default_model` or laravel/ai's default text model
+- `Headroom::for($agent, $prompt, ...)` counts the whole request a laravel/ai agent would send (instructions, history, tools, attachments, structured output schema and prompt) without calling the model, with the same arguments as `prompt()` plus `messages:` and `tools:` for state set with `withMessages()` and `withTools()`
 - Local estimating counter: OpenAI's o200k tokeniser, per-provider `estimate_ratios` and the safety margin for other providers, and fixed `attachment_tokens` for images, documents, audio and video
 - Anthropic native counter using `POST /v1/messages/count_tokens` with the provider's laravel/ai credentials and base URL
 - Gemini native counter using `POST models/{model}:countTokens` with a `generateContentRequest` built from the step
