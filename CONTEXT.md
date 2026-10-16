@@ -10,7 +10,8 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 |---|---|
 | `src/AiHeadroomServiceProvider.php` | Merges and publishes `config/ai-headroom.php` (tag `ai-headroom-config`) |
 | `src/Facades/Headroom.php`, `src/HeadroomManager.php` | Public entry point (alias `Headroom`). Built: `count()`, `defaultModel()`, `toTokenCount()`. Planned: `for()`, `fake()` |
-| `src/Resolving/` | Rebuilds the `Laravel\Ai\PendingStep` an agent would send, for `Headroom::for()` and `headroom:inspect` |
+| `src/Resolving/RequestResolver.php` | `resolve($agent, $prompt, $attachments, provider:, model:, messages:, tools:)` -> the first `PendingStep` the SDK would build, without calling the model |
+| `tests/Fixtures/Agents/` | Parity fixtures (instructions only, conversation with tool calls/replay blocks, tools incl. provider tools and a sub-agent, structured output with attributes, provider/model attributes and methods, cheapest/smartest, failover); `CapturesSteps` records the SDK's real `PendingStep` |
 | `src/Counting/` | `Contracts\Counter` (`PendingStep` -> `Tally`), `Contracts\Tokeniser`, `EstimatingCounter`, `TiktokenTokeniser` (o200k), `NativeCounter` base (provider lookup, 15 s timeout, breakdown scaling), `AnthropicCounter`, `GeminiCounter`, `OpenAiCounter`, `CounterResolver` (bound to `Counter`), `NativeCountCache`, `StepFingerprint`, `ToolDefinition` (shared tool shape). Planned: escalation |
 | `src/Counting/Gateways/` | SDK gateway subclasses exposing the protected request body and client for counting endpoints (`AnthropicCountingGateway`, `GeminiCountingGateway`, `OpenAiCountingGateway`) |
 | `src/Calibration/` | Learns a per-model correction factor from actual usage, fed by the `EnsureHeadroom` middleware |
@@ -65,7 +66,9 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | Decision | Reason |
 |---|---|
 | Guard and calibration run as `laravel/ai` agent step middleware on `PendingStep` | v1.2 hands middleware the fully resolved request (instructions, history, prompt, attachments, tools, schema, options) and the actual usage afterwards; no reflection or upstream PR needed. Details: `.claude/docs/request-resolver-spike.md` |
-| `RequestResolver` mirrors `GeneratesText::prompt()` from public APIs, guarded by a parity test against a captured `PendingStep` | Faking the agent to capture the step would mutate global state and write conversations |
+| `RequestResolver` mirrors `Promptable::prompt()` (provider/model resolution, prompt input, declared tools), `GeneratesText::prompt()` (history, `resolveTool()`, schema) and the loop's first step (`settleAbandonedToolCalls()`, `withoutForeignReplayBlocks()`, `toolsSupportedBy()`), all from public data | Faking the agent to capture the step would mutate global state and write conversations |
+| `RequestResolverParityTest` runs each fixture through the real SDK (agent faked, capture middleware) and requires equal `StepFingerprint`, provider, model, message/tool classes and options; mutation-checked (skipping settle, tool filtering or `#[UseCheapestModel]` each fail it) | Drift in laravel/ai shows up as a failing test, including in the weekly `sdk-latest` run |
+| Failover lists resolve to their first provider; approval-decision input is rejected; `withMessages()`/`withTools()` state must be passed as `messages:`/`tools:` | The SDK keeps that state private and flushes it on read; decisions resume a run rather than start one |
 | Native counters subclass the SDK gateways to reuse their protected request-body builders | Exact provider payloads without reimplementing serialisation; protected methods are outside semver, so the weekly `sdk-latest` CI job watches them |
 | Gemini native counting maps to `generateContentRequest` itself | The SDK's Gemini gateway uses the Interactions API, whose body `countTokens` does not accept |
 | Tokeniser: `yethee/tiktoken` with a persistent vocab cache path | MIT, maintained, o200k support, ~13 ms per 100 KB; downloads vocab files on first use |
