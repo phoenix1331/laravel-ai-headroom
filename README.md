@@ -62,7 +62,6 @@ Headroom uses the provider credentials you already configured for `laravel/ai`. 
 - `osv-scanner` for the pre-commit security audit: `go install github.com/google/osv-scanner/cmd/osv-scanner@latest`
 - Run `npm install` once after cloning to activate the Husky git hooks
 - `pcov` or `xdebug` only if you want coverage locally (`sudo apt install php8.4-pcov`)
-- This repo's `.mcp.json` configures MCP servers for Claude Code. GitHub MCP authenticates via `gh auth token`, so run `gh auth login` once per machine. MySQL MCP reads `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` and `MYSQL_DATABASE` from your shell (defaults `127.0.0.1:3306`, user `root`); Headroom itself needs no database. Playwright and Context7 need only `npx`
 
 ### Commands
 

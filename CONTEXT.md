@@ -134,6 +134,7 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | Larastan `configDirectories: [config]` | Lets `env()` in the package config pass while keeping the rule everywhere else |
 | No Docker: everything runs on the host PHP (WSL), deliberately overriding the default Docker/FrankenPHP/MySQL stack | A package has nothing to serve and no database; contributors expect `composer install && composer test`, CI runs on GitHub's PHP runners, and a container only duplicated the host runtime |
 | `composer.lock` gitignored | Libraries should not pin consumers' dependencies |
+| No `.mcp.json` (removed at Darren's request, overriding the template's MCP setup rule) | The package needs no MySQL, Playwright could not launch Chrome under WSL, and MCP servers are a per-developer choice rather than part of the package |
 | No Makefile | With Docker gone every target was a one-line wrapper; Composer scripts are the PHP package convention |
 | Dist archive ships only `src/`, `config/`, `resources/`, `composer.json`, `README.md`, `LICENSE`; everything else is `export-ignore`d in `.gitattributes` | Lean `composer require`; new dev files must be added to `.gitattributes` by hand (no automated archive check) |
 | `.claude/` gitignored | Planning files are not part of the deliverable |
