@@ -1,0 +1,66 @@
+name: Model price or context window update
+description: A model's price or context window is wrong, or a model is missing. No coding needed.
+title: "model update: "
+labels: [model-registry, good first issue]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for keeping the model registry accurate. Fill in what you know; a link to the provider's official pricing or model page is the most important part.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of update?
+      options:
+        - Price change
+        - Context window change
+        - New model
+        - Model retired
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider
+      options:
+        - Anthropic
+        - OpenAI
+        - Gemini
+        - Other (say which below)
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model name
+      description: As used in the API.
+      placeholder: claude-sonnet-5-5
+    validations:
+      required: true
+  - type: input
+    id: context-window
+    attributes:
+      label: Context window (tokens)
+      placeholder: "1000000"
+  - type: input
+    id: input-price
+    attributes:
+      label: Input price (per million tokens)
+      placeholder: "3.00"
+  - type: input
+    id: output-price
+    attributes:
+      label: Output price (per million tokens)
+      placeholder: "15.00"
+  - type: input
+    id: currency
+    attributes:
+      label: Currency
+      placeholder: USD
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: Link to the provider's official pricing or model documentation.
+    validations:
+      required: true

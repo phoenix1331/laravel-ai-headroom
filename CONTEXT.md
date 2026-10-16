@@ -51,6 +51,10 @@ Most of `src/` is planned, not yet built. Treat the table as the target layout.
 | `sdk-latest.yml` | Mondays 06:00 UTC + manual | `laravel/ai:*` (ignores our constraint, crosses majors), tests + Larastan |
 | `release.yml` | tag `v*` | GitHub release with notes from the matching `## [X.Y.Z]` `CHANGELOG.md` section; fails if the section is missing |
 | `dependabot.yml` | weekly | GitHub Actions and Composer dev dependencies |
+| `ISSUE_TEMPLATE/` | - | Bug report, feature request, model price/context window update (no-code contributions); blank issues off, questions routed to Discussions, security to `SECURITY.md` |
+| `PULL_REQUEST_TEMPLATE.md` | - | Tests, no real API calls, lint/analyse, changelog, docs checklist |
+
+Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, updating prices), `SECURITY.md` (what each counting method sends where), `RELEASING.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `CHANGELOG.md` (Keep a Changelog). All export-ignored.
 
 ## Decisions
 

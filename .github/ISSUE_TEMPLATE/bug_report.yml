@@ -1,0 +1,81 @@
+name: Bug report
+description: Something is counted wrongly, throws, or behaves unexpectedly.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the full exception message and stack trace if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: A minimal agent class and the call you made is ideal. Remove any real prompts or keys.
+      render: php
+    validations:
+      required: true
+  - type: input
+    id: package-version
+    attributes:
+      label: Headroom version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: laravel-ai-version
+    attributes:
+      label: laravel/ai version
+      placeholder: 1.2.3
+    validations:
+      required: true
+  - type: input
+    id: laravel-version
+    attributes:
+      label: Laravel version
+      placeholder: 13.36.0
+    validations:
+      required: true
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: 8.4.26
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider
+      options:
+        - Anthropic
+        - OpenAI
+        - Gemini
+        - Other (say which below)
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      placeholder: claude-sonnet-5-5
+    validations:
+      required: true
+  - type: dropdown
+    id: method
+    attributes:
+      label: Counting method (`method` config)
+      options:
+        - auto
+        - native
+        - estimate
+    validations:
+      required: true
