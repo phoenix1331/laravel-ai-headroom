@@ -29,7 +29,7 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
 | `src/Console/` | Built: `headroom:calibration` (table of samples, factor, error, margin, status, updated; `--model`, `--reset` with confirmation, `--force`). `headroom:inspect` (breakdown table with shares and overhead row, context, cost; `--provider`, `--model`, `--json`; exit 1 when it does not fit). `headroom:models` (registry table with source shipped/overridden/app, prices in the configured currency, tiers, fallback line, last-checked date with a warning after 60 days; `--provider`, `--json`) |
 | `config/ai-headroom.php` | Package config |
-| `docs/` | GitHub Pages site and `events.md` event reference (export-ignored; the README links to it) |
+| `docs/` | GitHub Pages site (`index.html`, self-contained apart from Google Fonts; serve from `/docs` on `main`), `events.md` event reference, `accuracy.md` (written by the accuracy suite). Export-ignored |
 
 Most of `src/` is planned, not yet built. Treat the table as the target layout.
 
@@ -93,6 +93,7 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | Percent-of-context breaches use the unrounded percentage | `percentUsed()` is rounded to 2 places for display and would let 80.004% pass an 80% limit |
 | Middleware limits/mode default from `ai-headroom.middleware` config; `->report()` returns a new instance | Agents declare `new EnsureHeadroom(...)` inline; services are resolved from the container at handle time |
 | Non-scalar context tags are dropped with a warning rather than thrown | "Rejected" while honouring "tagging never fails a request" |
+| Pages site: interactive context gauge hero (turns slider, 80% guard line, hatched headroom), Archivo (width axis) + JetBrains Mono, dark-only navy palette (Darren's choice), `headroom-logo.png` (white on transparent) as the brand image with its padding cropped by negative margins, left-aligned single column. Accuracy section marked pending until `composer test:accuracy` runs with keys | One memorable element tied to the subject; no unmeasured numbers published |
 | Event reference lives in `docs/events.md` until the README task | RULES.md keeps the README for the final task |
 | Failover lists resolve to their first provider; approval-decision input is rejected; `withMessages()`/`withTools()` state must be passed as `messages:`/`tools:` | The SDK keeps that state private and flushes it on read; decisions resume a run rather than start one |
 | Native counters subclass the SDK gateways to reuse their protected request-body builders | Exact provider payloads without reimplementing serialisation; protected methods are outside semver, so the weekly `sdk-latest` CI job watches them |

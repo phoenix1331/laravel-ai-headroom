@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Headroom for the Laravel AI SDK</title>
+<meta name="description" content="Know how much room your AI request has left, before you send it. Token counting, context limits and cost guards for the Laravel AI SDK.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --fog: #10182B;
+    --paper: #18233A;
+    --ink: #E7ECF3;
+    --ink-soft: #A9B5C9;
+    --rule: #2E3B57;
+    --limit: #FF5A5F;
+    --instructions: #6FA3DB;
+    --history: #F2C14E;
+    --tools: #5CC08A;
+    --attachments: #B88AD0;
+    --prompt: #F07A8A;
+    --code-bg: #0A1020;
+    --code-ink: #E7ECF3;
+    --hatch: #3A4866;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--fog);
+    color: var(--ink);
+    font-family: "Archivo", system-ui, sans-serif;
+    font-variation-settings: "wdth" 100;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+
+  a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { text-decoration-thickness: 2px; }
+  :focus-visible { outline: 3px solid var(--instructions); outline-offset: 3px; border-radius: 2px; }
+
+  .wrap { max-width: 72rem; margin: 0 auto; padding: 0 1rem; }
+  .measure { max-width: 42rem; }
+
+  h1, h2, h3 { font-variation-settings: "wdth" 125; line-height: 1.1; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(2.25rem, 6vw, 4.25rem); font-weight: 800; margin: 0 0 1.25rem; max-width: 16ch; }
+  h2 { font-size: clamp(1.5rem, 3vw, 2.125rem); font-weight: 750; margin: 0 0 1rem; }
+  h3 { font-size: 1.125rem; font-weight: 700; margin: 2rem 0 0.5rem; }
+  p { margin: 0 0 1rem; }
+  .lede { font-size: 1.25rem; color: var(--ink-soft); max-width: 38rem; }
+
+  header.site { padding: 1.25rem 0; }
+  header.site .wrap { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .brand { font-weight: 800; font-variation-settings: "wdth" 125; text-decoration: none; font-size: 1.125rem; display: inline-block; }
+
+  /* headroom-logo.png has wide transparent padding (artwork box 92-1900 x 168-610 of 1983x793);
+     negative margins crop it so the artwork aligns with the page edge. */
+  .brand img {
+    --h: 2.25rem;
+    display: block;
+    height: calc(var(--h) * 1.7941);
+    width: auto;
+    margin: calc(var(--h) * -0.3801) 0 calc(var(--h) * -0.4140) calc(var(--h) * -0.2081);
+  }
+
+  nav.links { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.9375rem; }
+
+  .hero { padding-top: 3rem; padding-bottom: 2rem; }
+
+  .install {
+    display: inline-flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0 2.5rem;
+    background: var(--code-bg); color: var(--code-ink); border-radius: 6px; padding: 0.75rem 0.75rem 0.75rem 1rem;
+    font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.9375rem; max-width: 100%; overflow-x: auto;
+  }
+  .install code { background: none; padding: 0; font-size: inherit; }
+  .install button {
+    font: inherit; font-family: "Archivo", sans-serif; font-size: 0.875rem; font-weight: 600;
+    background: var(--code-ink); color: var(--code-bg); border: 0; border-radius: 4px; padding: 0.35rem 0.75rem; cursor: pointer;
+  }
+
+  /* The gauge: the one bold element on the page */
+  .gauge { margin: 0; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 1.5rem; }
+  .gauge-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-bottom: 1rem; }
+  .gauge-title { font-weight: 700; }
+  .gauge-reading { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+  .gauge-reading strong { color: var(--ink); font-size: 1.5rem; font-variation-settings: "wdth" 115; }
+
+  .bar {
+    position: relative; height: 4.5rem; border-radius: 6px; overflow: hidden; display: flex;
+    background: repeating-linear-gradient(135deg, transparent 0 9px, var(--hatch) 9px 11px), var(--paper);
+    border: 1px solid var(--rule);
+  }
+  .seg { height: 100%; transition: width 160ms ease-out; }
+  .seg.instructions { background: var(--instructions); }
+  .seg.tools { background: var(--tools); }
+  .seg.history { background: var(--history); }
+  .seg.prompt { background: var(--prompt); }
+  .limit-line { position: absolute; top: -6px; bottom: -6px; left: 80%; width: 0; border-left: 3px dashed var(--limit); }
+  .limit-label { white-space: nowrap; position: absolute; left: calc(80% + 8px); top: 6px; font-size: 0.8125rem; font-weight: 700; color: var(--limit); background: var(--paper); padding: 0 4px; border-radius: 3px; }
+  .headroom-label { position: absolute; right: 10px; bottom: 6px; font-size: 0.8125rem; font-weight: 600; color: var(--ink-soft); background: var(--paper); padding: 0 4px; border-radius: 3px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 1rem 0 1.25rem; padding: 0; list-style: none; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+  .legend li { display: flex; align-items: center; gap: 0.5rem; }
+  .swatch { width: 0.875rem; height: 0.875rem; border-radius: 3px; display: inline-block; }
+  .swatch.headroom { background: repeating-linear-gradient(135deg, var(--paper) 0 3px, var(--hatch) 3px 5px); border: 1px solid var(--rule); }
+
+  .control { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; }
+  .control label { font-weight: 600; }
+  .control output { font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; font-weight: 700; }
+  input[type="range"] { width: 100%; accent-color: var(--history); }
+
+  .verdict { margin: 1.25rem 0 0; padding: 0.875rem 1rem; border-radius: 6px; font-weight: 600; border-left: 4px solid var(--tools); background: color-mix(in srgb, var(--tools) 10%, var(--paper)); }
+  .verdict.blocked { border-left-color: var(--limit); background: color-mix(in srgb, var(--limit) 10%, var(--paper)); }
+  .verdict code { font-weight: 600; }
+  .gauge-note { margin: 0.75rem 0 0; font-size: 0.875rem; color: var(--ink-soft); }
+
+  section { padding: 3.5rem 0; border-top: 1px solid var(--rule); }
+
+  code, pre { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  :not(pre) > code { font-size: 0.9em; background: color-mix(in srgb, var(--ink) 8%, transparent); padding: 0.1em 0.35em; border-radius: 4px; }
+  pre {
+    background: var(--code-bg); color: var(--code-ink); padding: 1.125rem 1.25rem; border-radius: 8px;
+    overflow-x: auto; font-size: 0.875rem; line-height: 1.6; margin: 0 0 1.25rem; max-width: 46rem;
+  }
+  pre .c { color: #8FA0BC; }
+  pre .k { color: #F2C14E; }
+  pre .s { color: #8FD3A8; }
+
+  pre.terminal { max-width: 60rem; }
+
+  .steps { list-style: none; padding: 0; margin: 0; counter-reset: step; max-width: 46rem; }
+  .steps > li { counter-increment: step; position: relative; padding-left: 2.75rem; margin-bottom: 1.5rem; }
+  .steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: 0.1rem; width: 1.875rem; height: 1.875rem; border-radius: 50%;
+    border: 2px solid var(--ink); display: grid; place-items: center; font-weight: 800; font-size: 0.9375rem;
+  }
+  .steps h3 { margin-top: 0.15rem; }
+
+  table { border-collapse: collapse; width: 100%; max-width: 46rem; margin: 0 0 1.25rem; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 0.6rem 0.75rem 0.6rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: 700; }
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+
+  .pending { border: 1px dashed var(--rule); border-radius: 8px; padding: 1rem 1.25rem; max-width: 46rem; color: var(--ink-soft); }
+
+  .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; max-width: 56rem; margin: 1.5rem 0; padding: 0; list-style: none; }
+  .flow li { padding: 1rem 1.25rem 1rem 0; border-top: 3px solid var(--ink); font-size: 0.9375rem; }
+  .flow li strong { display: block; margin-bottom: 0.25rem; }
+
+  footer { padding: 2.5rem 0 3.5rem; border-top: 1px solid var(--rule); color: var(--ink-soft); font-size: 0.9375rem; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 1rem 2rem; justify-content: space-between; }
+
+  @media (max-width: 720px) {
+    .gauge { padding: 1rem; }
+    .bar { height: 3.5rem; }
+    .control { grid-template-columns: 1fr auto; }
+    .control label { grid-column: 1 / -1; }
+    .flow { grid-template-columns: 1fr 1fr; }
+    .headroom-label { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .seg { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="headroom-logo.png" alt="Headroom" width="1983" height="793"></a>
+    <nav class="links" aria-label="Project">
+      <a href="https://github.com/phoenix1331/laravel-ai-headroom">GitHub</a>
+      <a href="https://packagist.org/packages/phoenix1331/laravel-ai-headroom">Packagist</a>
+      <a href="https://github.com/phoenix1331/laravel-ai-headroom/blob/main/CHANGELOG.md">Changelog</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero wrap">
+    <h1>Know how much room your AI request has left, before you send it.</h1>
+    <p class="lede">Headroom counts the whole request a Laravel AI SDK agent is about to send (instructions, history, tools, attachments and prompt), checks it against the model's context window and your cost limits, and can stop it before it goes.</p>
+
+    <div class="install">
+      <code id="install-command">composer require phoenix1331/laravel-ai-headroom</code>
+      <button type="button" id="copy-install">Copy</button>
+    </div>
+
+    <figure class="gauge" aria-labelledby="gauge-title">
+      <div class="gauge-head">
+        <span class="gauge-title" id="gauge-title">A support agent on a 200,000-token model</span>
+        <span class="gauge-reading"><strong id="used-tokens">0</strong> tokens, <span id="used-percent">0%</span> of the window</span>
+      </div>
+
+      <div class="bar" role="img" id="bar" aria-label="Context window usage">
+        <div class="seg instructions" id="seg-instructions"></div>
+        <div class="seg tools" id="seg-tools"></div>
+        <div class="seg history" id="seg-history"></div>
+        <div class="seg prompt" id="seg-prompt"></div>
+        <span class="limit-line" aria-hidden="true"></span>
+        <span class="limit-label" aria-hidden="true">80% limit</span>
+        <span class="headroom-label" id="headroom-label" aria-hidden="true">headroom</span>
+      </div>
+
+      <ul class="legend">
+        <li><span class="swatch" style="background: var(--instructions)"></span>Instructions <span id="l-instructions"></span></li>
+        <li><span class="swatch" style="background: var(--tools)"></span>Tools <span id="l-tools"></span></li>
+        <li><span class="swatch" style="background: var(--history)"></span>History <span id="l-history"></span></li>
+        <li><span class="swatch" style="background: var(--prompt)"></span>Prompt <span id="l-prompt"></span></li>
+        <li><span class="swatch headroom"></span>Headroom <span id="l-headroom"></span></li>
+      </ul>
+
+      <div class="control">
+        <label for="turns">Conversation turns so far</label>
+        <input type="range" id="turns" min="0" max="120" value="70">
+        <output for="turns" id="turns-out">70</output>
+      </div>
+
+      <p class="verdict" id="verdict" role="status"></p>
+      <figcaption class="gauge-note">An illustration: roughly 1,450 tokens per turn of history, 1,800 of instructions and 3,600 of tool schemas. Headroom measures your real requests.</figcaption>
+    </figure>
+  </div>
+
+  <section id="problem">
+    <div class="wrap"><div class="measure">
+      <h2>The problem it solves</h2>
+      <p>A chat feature works in testing. Six weeks later a loyal customer's conversation has 90 turns of history, the retrieval step adds twelve document chunks, and the request quietly goes past the context window. The provider rejects it, or the SDK trims the oldest history and the agent forgets what was agreed.</p>
+      <p>The same growth shows up on the bill. In a multi-tenant app, one tenant's long threads can cost more per request than everyone else's put together, and you only find out at the end of the month.</p>
+      <p>Counting the prompt string is not enough: tool schemas, the system prompt and the history are all sent too, and often make up most of the request. Headroom counts what the SDK will actually send.</p>
+    </div></div>
+  </section>
+
+  <section id="inspect">
+    <div class="wrap">
+      <div class="measure">
+        <h2>See what is in a request</h2>
+        <p>Point <code>headroom:inspect</code> at an agent and a prompt to see where the tokens go. It exits with a failure when the request does not fit, so it can run in CI.</p>
+      </div>
+<pre class="terminal" aria-label="Example headroom:inspect output"><span class="c">$</span> php artisan headroom:inspect "App\Ai\Agents\SupportAgent" "Where is my refund?"
+
+  Agent ................................ App\Ai\Agents\SupportAgent
+  Model ................................ claude-sonnet-5-5 (anthropic)
+  Method ............................... Native (expected error 0%)
+
++------------------+---------+--------+
+| Part             | Tokens  | Share  |
++------------------+---------+--------+
+| Instructions     | 1,812   | 1.06%  |
+| History          | 162,240 | 94.71% |
+| Tools            | 3,604   | 2.1%   |
+| Attachments      | 0       | 0%     |
+| Prompt           | 14      | 0.01%  |
+| Message overhead | 3,627   | 2.12%  |
+| Total            | 171,297 | 100%   |
++------------------+---------+--------+
+  Context .............................. 171,297 of 1,000,000 tokens (17.13%), 828,703 remaining
+  Estimated cost ....................... $0.3426 input + up to $1.2800 output = up to $1.6226 USD</pre>
+    </div>
+  </section>
+
+  <section id="quick-start">
+    <div class="wrap">
+      <h2>Quick start</h2>
+      <ol class="steps">
+        <li>
+          <h3>Install</h3>
+          <pre><span class="c">$</span> composer require phoenix1331/laravel-ai-headroom
+<span class="c">$</span> php artisan vendor:publish --tag=ai-headroom-config</pre>
+        </li>
+        <li>
+          <h3>Count an agent request</h3>
+<pre><span class="k">use</span> Phoenix1331\AiHeadroom\Facades\Headroom;
+
+$count = Headroom::<span class="k">for</span>(<span class="k">new</span> SupportAgent($user), <span class="s">'Where is my refund?'</span>);
+
+$count->total();         <span class="c">// 171297</span>
+$count->breakdown();     <span class="c">// ['instructions' => 1812, 'history' => 162240, ...]</span>
+$count->percentUsed();   <span class="c">// 17.13</span>
+$count->fits();          <span class="c">// true</span>
+$count->estimatedCost(); <span class="c">// Cost: input plus worst-case output</span></pre>
+        </li>
+        <li>
+          <h3>Guard the agent</h3>
+<pre><span class="k">use</span> Phoenix1331\AiHeadroom\Middleware\EnsureHeadroom;
+
+<span class="k">public function</span> middleware(): array
+{
+    <span class="k">return</span> [<span class="k">new</span> EnsureHeadroom(maxPercentOfContext: <span class="s">80</span>, maxCost: <span class="s">0.20</span>)];
+}</pre>
+          <p>Every step the agent takes is counted before it is sent. Over a limit, Headroom throws <code>TokenLimitExceeded</code> carrying the full count, so you can trim history, summarise or refuse. Prefer a warning? Use <code>(new EnsureHeadroom(...))->report()</code> and listen for <code>HeadroomLow</code>.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="events">
+    <div class="wrap"><div class="measure">
+      <h2>Events, not storage</h2>
+      <p>Headroom stores nothing about your requests. It fires events you can log, chart or ship to a dashboard, and they never contain prompt or response text.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Event</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td><code>TokensCounted</code></td><td>Before a request is sent, with the breakdown, window and estimated cost</td></tr>
+            <tr><td><code>TokensUsed</code></td><td>After the response, including streams, with actual tokens and cost</td></tr>
+            <tr><td><code>HeadroomLow</code></td><td>A limit was passed in report mode</td></tr>
+            <tr><td><code>RequestBlocked</code></td><td>Just before <code>TokenLimitExceeded</code> is thrown</td></tr>
+            <tr><td><code>RequestFailed</code></td><td>The provider call failed (class and HTTP status only)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>A request ID links the count to the usage. Tag requests with your own context, such as tenant or user, using <code>Headroom::resolveContextUsing()</code>. Every property is documented in the <a href="https://github.com/phoenix1331/laravel-ai-headroom/blob/main/docs/events.md">events reference</a>.</p>
+    </div></div>
+  </section>
+
+  <section id="accuracy">
+    <div class="wrap"><div class="measure">
+      <h2>Exact where it can be, honest where it cannot</h2>
+      <p>Anthropic, OpenAI and Gemini all offer an endpoint that counts a request exactly. Calling it costs a network round trip, so in the default <code>auto</code> mode Headroom estimates locally first and only asks the provider when the estimate is close to a limit. Clear passes and clear failures never wait on the network.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Provider</th><th>Native counting</th><th>Local estimate</th></tr></thead>
+          <tbody>
+            <tr><td>OpenAI</td><td><code>/v1/responses/input_tokens</code></td><td>Same tokeniser (o200k), small message overhead drift</td></tr>
+            <tr><td>Anthropic</td><td><code>/v1/messages/count_tokens</code></td><td>Approximation plus a safety margin, then self-calibrated</td></tr>
+            <tr><td>Gemini</td><td><code>models/{model}:countTokens</code></td><td>Approximation plus a safety margin, then self-calibrated</td></tr>
+            <tr><td>Other laravel/ai providers</td><td>Register your own counter</td><td>Approximation plus a safety margin, then self-calibrated</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pending" role="note">
+        <p><strong>Measured accuracy is coming.</strong> Headroom ships an accuracy suite that compares its estimates with each provider's own counts across prose, code, JSON, French, Japanese and a tool-heavy agent. The first results will be published in <a href="https://github.com/phoenix1331/laravel-ai-headroom/blob/main/docs/accuracy.md">docs/accuracy.md</a> before the first release, rather than quoting numbers that have not been measured.</p>
+      </div>
+      <p>Prefer nothing to leave your app? Set <code>HEADROOM_METHOD=estimate</code> and Headroom never sends prompt content to a counting endpoint.</p>
+    </div></div>
+  </section>
+
+  <section id="calibration">
+    <div class="wrap">
+      <div class="measure">
+        <h2>Estimates that improve with use</h2>
+        <p>Every response reports the input tokens it actually used. Headroom compares that with what it estimated and learns a correction for each model, from your own traffic.</p>
+      </div>
+      <ol class="flow">
+        <li><strong>Estimate</strong>Count locally, with a safety margin</li>
+        <li><strong>Send</strong>The provider reports the real input tokens</li>
+        <li><strong>Learn</strong>Update the model's correction factor and measured error</li>
+        <li><strong>Correct</strong>After 20 samples, estimates use the factor and a margin that shrinks as error falls</li>
+      </ol>
+      <div class="measure">
+        <p>Each observation is clamped, so one unusual request cannot skew the factor, and the weighting adapts if a provider changes its tokeniser. Corrected counts are reported as <code>Calibrated</code> with their measured error, so you always know what you are looking at. Check progress with <code>php artisan headroom:calibration</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="models">
+    <div class="wrap"><div class="measure">
+      <h2>Context windows and prices</h2>
+      <p>Headroom ships the context windows, output limits and prices of current Anthropic, OpenAI and Gemini models, including long-prompt price tiers and cache pricing, and updates them with each release. Costs can be shown in US dollars or pounds sterling.</p>
+<pre><span class="c">// config/ai-headroom.php</span>
+<span class="s">'models'</span> => [
+    <span class="s">'claude-sonnet-5-5'</span> => [<span class="s">'input_price'</span> => <span class="s">1.80</span>],   <span class="c">// your negotiated rate</span>
+    <span class="s">'my-fine-tune'</span> => [
+        <span class="s">'provider'</span> => <span class="s">'openai'</span>,
+        <span class="s">'context_window'</span> => <span class="s">128_000</span>,
+        <span class="s">'max_output_tokens'</span> => <span class="s">16_000</span>,
+        <span class="s">'input_price'</span> => <span class="s">3.00</span>,
+        <span class="s">'output_price'</span> => <span class="s">12.00</span>,
+    ],
+],</pre>
+      <p><code>php artisan headroom:models</code> lists every model, marks which prices are yours, and warns when the shipped prices were last checked over 60 days ago. Spotted an outdated price? <a href="https://github.com/phoenix1331/laravel-ai-headroom/issues/new/choose">Report a model update</a>; no code needed.</p>
+    </div></div>
+  </section>
+
+  <section id="testing">
+    <div class="wrap"><div class="measure">
+      <h2>Test your guards</h2>
+<pre>Headroom::fake([SupportAgent::<span class="k">class</span> => <span class="s">900_000</span>]);
+
+expect(fn () => (<span class="k">new</span> SupportAgent($user))->prompt(<span class="s">'Hello'</span>))
+    ->toThrow(TokenLimitExceeded::<span class="k">class</span>);
+
+Headroom::assertCounted(SupportAgent::<span class="k">class</span>);</pre>
+      <p>The fake replaces only the counting, so your middleware, limits and event listeners run for real, and nothing reaches a provider.</p>
+    </div></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Headroom is open source under the MIT licence.</span>
+    <nav class="links" aria-label="More">
+      <a href="https://github.com/phoenix1331/laravel-ai-headroom#readme">Full documentation</a>
+      <a href="https://github.com/phoenix1331/laravel-ai-headroom/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/phoenix1331/laravel-ai-headroom/blob/main/CONTRIBUTING.md">Contributing</a>
+      <a href="https://github.com/phoenix1331/laravel-ai-headroom/blob/main/SECURITY.md">Security</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var WINDOW = 200000;
+    var LIMIT = 0.8;
+    var parts = { instructions: 1800, tools: 3600, prompt: 14 };
+    var perTurn = 1450;
+    var format = new Intl.NumberFormat('en-GB');
+
+    var turns = document.getElementById('turns');
+    var turnsOut = document.getElementById('turns-out');
+    var verdict = document.getElementById('verdict');
+
+    function set(id, value) { document.getElementById(id).textContent = value; }
+
+    function render() {
+      var history = Number(turns.value) * perTurn;
+      var used = parts.instructions + parts.tools + history + parts.prompt;
+      var shown = Math.min(used, WINDOW);
+      var scale = shown / used;
+
+      ['instructions', 'tools', 'prompt'].forEach(function (part) {
+        document.getElementById('seg-' + part).style.width = (parts[part] * scale / WINDOW * 100) + '%';
+        set('l-' + part, format.format(parts[part]));
+      });
+      document.getElementById('seg-history').style.width = (history * scale / WINDOW * 100) + '%';
+      set('l-history', format.format(history));
+
+      var remaining = WINDOW - used;
+      set('l-headroom', remaining >= 0 ? format.format(remaining) : 'none');
+      set('used-tokens', format.format(used));
+      set('used-percent', (used / WINDOW * 100).toFixed(1) + '%');
+      turnsOut.textContent = turns.value;
+      document.getElementById('headroom-label').hidden = remaining < WINDOW * 0.12;
+      document.getElementById('bar').setAttribute('aria-label', format.format(used) + ' of ' + format.format(WINDOW) + ' tokens used');
+
+      if (used > WINDOW) {
+        verdict.className = 'verdict blocked';
+        verdict.innerHTML = 'Over the context window by ' + format.format(used - WINDOW) + ' tokens. Without Headroom the provider rejects this, or the oldest history is silently dropped.';
+      } else if (used > WINDOW * LIMIT) {
+        verdict.className = 'verdict blocked';
+        verdict.innerHTML = 'Past the 80% limit: <code>EnsureHeadroom</code> throws <code>TokenLimitExceeded</code> before this request is sent, so you can summarise the history first.';
+      } else {
+        verdict.className = 'verdict';
+        verdict.innerHTML = 'Inside the limit: the request is sent, and <code>TokensUsed</code> reports what it actually cost.';
+      }
+    }
+
+    turns.addEventListener('input', render);
+    render();
+
+    document.getElementById('copy-install').addEventListener('click', function (event) {
+      var button = event.currentTarget;
+      navigator.clipboard.writeText(document.getElementById('install-command').textContent).then(function () {
+        button.textContent = 'Copied';
+        setTimeout(function () { button.textContent = 'Copy'; }, 1500);
+      });
+    });
+  })();
+</script>
+</body>
+</html>
