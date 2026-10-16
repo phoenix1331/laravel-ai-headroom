@@ -19,11 +19,14 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Darren",
-            "email": "darren@phoenix1331.co.uk",
-            "homepage": "https://phoenix1331.co.uk"
+            "name": "Darren Williams",
+            "homepage": "https://github.com/phoenix1331"
         }
     ],
+    "support": {
+        "issues": "https://github.com/phoenix1331/laravel-ai-headroom/issues",
+        "source": "https://github.com/phoenix1331/laravel-ai-headroom"
+    },
     "require": {
         "php": "^8.3",
         "illuminate/contracts": "^12.0|^13.0",
