@@ -51,12 +51,16 @@ A counter turns a resolved agent request into a token count using the provider's
 
 ## Updating model prices or context windows
 
-Prices and context windows live in `config/ai-headroom.php` under `models`. Outdated prices are the quickest way to lose trust, so updates are very welcome.
+Shipped prices and context windows live in `resources/models.php`. Outdated prices are the quickest way to lose trust, so updates are very welcome.
 
-1. Edit the model's entry (context window, input price and output price per million tokens) or add a new one.
-2. Update the "last checked" date at the top of the `models` array.
+1. Edit the model's entry (`context_window`, `max_output_tokens`, `input_price` and `output_price` per million tokens, plus any long-prompt `tiers`) or add a new one. Use the provider's standard, non-batch prices in USD.
+2. Update `last_checked` at the top of the file.
 3. Link the provider's pricing page in the pull request.
 4. Add a changelog line under `## [Unreleased]`, e.g. `- Updated claude-sonnet-5-5 input price`.
+
+`tests/Feature/ModelRegistryTest.php` fails if `laravel/ai`'s default, cheapest or smartest model for a provider has no entry, so a new SDK default is caught by CI.
+
+Apps can override any field, or add private models, through `models` in their published `config/ai-headroom.php`; those changes never belong in `resources/models.php`.
 
 Not comfortable with a pull request? Open a "Model price or context window update" issue instead.
 

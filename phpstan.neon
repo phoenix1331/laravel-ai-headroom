@@ -6,4 +6,7 @@ parameters:
     paths:
         - src
         - config
+        - resources
+    configDirectories:
+        - config
     tmpDir: build/phpstan

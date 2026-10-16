@@ -7,7 +7,7 @@ Headroom follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Bef
 1. Make sure `main` is green: tests, static analysis and the most recent `sdk latest` run.
 2. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it.
 3. If the release contains a breaking change, add an entry to `UPGRADING.md` (create it on the first breaking change).
-4. If model prices or context windows changed, confirm the "last checked" date in `config/ai-headroom.php` is current.
+4. If model prices or context windows changed, confirm `last_checked` in `resources/models.php` is current.
 5. Commit: `chore: release vX.Y.Z`.
 6. Tag and push:
 
