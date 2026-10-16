@@ -21,7 +21,7 @@ npm install   # activates the git hooks
 |---|---|
 | `composer test` | Unit and feature tests. Never calls a real API |
 | `composer test:coverage` | Tests with coverage; fails below 90% on `src/` (needs `pcov` or `xdebug`) |
-| `composer test:accuracy` | Compares estimates with real provider counts. Needs `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` or `OPENAI_API_KEY` and costs a small amount of rate limit |
+| `composer test:accuracy` | Compares estimates with real provider counts and rewrites `docs/accuracy.md`. Needs at least one of `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY` (providers without a key are skipped); `HEADROOM_ACCURACY_{ANTHROPIC,GEMINI,OPENAI}_MODEL` change the model. Counting endpoints do not bill generation, but they are rate-limited |
 | `composer lint` | Fixes code style with Pint |
 | `composer lint:test` | Checks code style without changing files |
 | `composer analyse` | Larastan at max level |

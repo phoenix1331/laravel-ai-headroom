@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Models\Order;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+final class RefundController
+{
+    public function __invoke(Request $request, Order $order): JsonResponse
+    {
+        $this->authorize('refund', $order);
+
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:'.$order->total],
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        if ($order->refunds()->sum('amount') + $validated['amount'] > $order->total) {
+            return response()->json(['message' => 'Refund exceeds the order total.'], 422);
+        }
+
+        $refund = $order->refunds()->create($validated + ['status' => 'pending']);
+
+        dispatch(new ProcessRefund($refund))->onQueue('payments');
+
+        return response()->json(['id' => $refund->id, 'status' => $refund->status], 201);
+    }
+}
