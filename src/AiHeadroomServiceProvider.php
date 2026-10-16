@@ -7,12 +7,15 @@ namespace Phoenix1331\AiHeadroom;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
+use Laravel\Ai\AiManager;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Counter;
 use Phoenix1331\AiHeadroom\Counting\Contracts\Tokeniser;
+use Phoenix1331\AiHeadroom\Counting\CounterResolver;
 use Phoenix1331\AiHeadroom\Counting\EstimatingCounter;
 use Phoenix1331\AiHeadroom\Counting\TiktokenTokeniser;
 use Phoenix1331\AiHeadroom\Currency\ConfiguredExchangeRates;
 use Phoenix1331\AiHeadroom\Currency\Contracts\ExchangeRates;
+use Phoenix1331\AiHeadroom\Enums\CountingMode;
 use Phoenix1331\AiHeadroom\Enums\Currency;
 use Phoenix1331\AiHeadroom\Models\ModelRegistry;
 
@@ -59,7 +62,15 @@ class AiHeadroomServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->bind(Counter::class, EstimatingCounter::class);
+        $this->app->singleton(CounterResolver::class, fn (Application $app): CounterResolver => new CounterResolver(
+            container: $app,
+            ai: $app->make(AiManager::class),
+            estimator: $app->make(EstimatingCounter::class),
+            mode: CountingMode::fromConfig($app->make('config')->string('ai-headroom.method', 'auto')),
+            counters: $app->make('config')->array('ai-headroom.counters', []),
+        ));
+
+        $this->app->bind(Counter::class, CounterResolver::class);
 
         $this->app->singleton(HeadroomManager::class, fn (Application $app): HeadroomManager => new HeadroomManager(
             counter: $app->make(Counter::class),

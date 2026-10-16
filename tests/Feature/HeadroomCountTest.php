@@ -12,6 +12,7 @@ use Phoenix1331\AiHeadroom\HeadroomManager;
 use Phoenix1331\AiHeadroom\Tests\Fixtures\WordTokeniser;
 
 beforeEach(function (): void {
+    config(['ai-headroom.method' => 'estimate']);
     app()->instance(Tokeniser::class, new WordTokeniser);
 });
 

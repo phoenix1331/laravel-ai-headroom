@@ -11,12 +11,12 @@ This is a Composer **package**, not a Laravel app. There is no `app/`, no routes
 | `src/AiHeadroomServiceProvider.php` | Merges and publishes `config/ai-headroom.php` (tag `ai-headroom-config`) |
 | `src/Facades/Headroom.php`, `src/HeadroomManager.php` | Public entry point (alias `Headroom`). Built: `count()`, `defaultModel()`, `toTokenCount()`. Planned: `for()`, `fake()` |
 | `src/Resolving/` | Rebuilds the `Laravel\Ai\PendingStep` an agent would send, for `Headroom::for()` and `headroom:inspect` |
-| `src/Counting/` | `Contracts\Counter` (`PendingStep` -> `Tally`), `Contracts\Tokeniser`, `EstimatingCounter`, `TiktokenTokeniser` (o200k), `NativeCounter` base (provider lookup, 15 s timeout, breakdown scaling), `AnthropicCounter`, `GeminiCounter`, `OpenAiCounter`. Planned: resolver, escalation |
+| `src/Counting/` | `Contracts\Counter` (`PendingStep` -> `Tally`), `Contracts\Tokeniser`, `EstimatingCounter`, `TiktokenTokeniser` (o200k), `NativeCounter` base (provider lookup, 15 s timeout, breakdown scaling), `AnthropicCounter`, `GeminiCounter`, `OpenAiCounter`, `CounterResolver` (bound to `Counter`). Planned: escalation |
 | `src/Counting/Gateways/` | SDK gateway subclasses exposing the protected request body and client for counting endpoints (`AnthropicCountingGateway`, `GeminiCountingGateway`, `OpenAiCountingGateway`) |
 | `src/Calibration/` | Learns a per-model correction factor from actual usage, fed by the `EnsureHeadroom` middleware |
 | `src/Models/ModelRegistry.php` | Model specs: shipped `resources/models.php` merged with `config('ai-headroom.models')` overrides; cautious fallback for unknown models |
 | `resources/models.php` | Shipped context windows, max output and per-million prices (with long-prompt tiers) plus `last_checked`; not published |
-| `src/Data/`, `src/Enums/` | `TokenCount`, `Tally` (counter output: figures only), `Cost`, `ModelSpec`, `CountMethod`, `Currency` |
+| `src/Data/`, `src/Enums/` | `TokenCount`, `Tally` (counter output: figures only), `Cost`, `ModelSpec`, `CountMethod`, `CountingMode`, `Currency` |
 | `src/Currency/` | `Contracts\ExchangeRates` and `ConfiguredExchangeRates` (fixed rates per 1 USD from config) |
 | `src/Middleware/`, `src/Exceptions/`, `src/Events/` | `EnsureHeadroom` guard, `TokenLimitExceeded`, `TokensCounted`, `HeadroomLow` |
 | `src/Console/` | `headroom:inspect`, `headroom:models`, `headroom:calibration` |
@@ -74,6 +74,9 @@ Community docs: `CONTRIBUTING.md` (setup, checks, adding a provider counter, upd
 | `Cost` rounds amounts to 8 decimal places | Removes float noise (`0.15 + 0.96`) while keeping per-token precision on cheap models |
 | Native counts: total from the provider, breakdown = local estimate's split scaled to that total (floored), confidence 0.0 | Counting endpoints return one number; a second call per part would multiply cost and rate-limit use |
 | Anthropic counting: SDK `buildTextRequestBody()` filtered to `model, messages, system, tools, tool_choice, thinking, output_config, cache_control`, posted with the SDK client to `messages/count_tokens`, 15 s timeout | Same serialisation, key, base URL, version and beta headers as the real call |
+| `CounterResolver` picks per step by the provider's laravel/ai **driver** via config `counters` (driver => Counter class) | Custom provider names on a supported driver still count natively; apps can register counters for other drivers |
+| Mode rules: `estimate` never resolves the provider; `auto` estimates when the driver has no counter, the provider is unknown, or its key is blank; `native` throws on an unknown provider and still calls the endpoint with a blank key | laravel/ai's default config defines every provider with null keys, so auto must not treat "defined" as "usable"; native should surface misconfiguration |
+| Base `TestCase` calls `Http::preventStrayRequests()`; only `tests/Accuracy/` re-allows them | A configured key once let a test make a real Anthropic call; the guard makes "no real API calls" structural |
 | OpenAI counting: SDK Responses `buildTextRequestBody()` filtered to `model, input, instructions, tools, tool_choice, parallel_tool_calls, text, reasoning, truncation, conversation, previous_response_id, personality`, posted to `responses/input_tokens` | Same body as the real call minus `max_output_tokens`, `temperature`, `top_p`, `store`; OpenAI documents the count as exact |
 | Gemini counting builds its own `generateContentRequest` (`contents` with `user`/`model` roles, `systemInstruction`, `functionDeclarations` with `parametersJsonSchema`, `generationConfig.responseJsonSchema`) and reuses only the SDK's `mapAttachment()`, client and error handling | The SDK uses the Interactions API (`user_input`/`model_output` turns), which `countTokens` does not accept |
 | Gemini provider tools (search, code execution) and assistant replay blocks are not sent for counting | No function-declaration equivalent in `countTokens`; small undercount, noted in the gateway |

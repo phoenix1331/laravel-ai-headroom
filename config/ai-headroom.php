@@ -1,6 +1,9 @@
 <?php
 
 declare(strict_types=1);
+use Phoenix1331\AiHeadroom\Counting\AnthropicCounter;
+use Phoenix1331\AiHeadroom\Counting\GeminiCounter;
+use Phoenix1331\AiHeadroom\Counting\OpenAiCounter;
 
 return [
 
@@ -29,6 +32,23 @@ return [
     */
 
     'method' => env('HEADROOM_METHOD', 'auto'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Native counters
+    |--------------------------------------------------------------------------
+    |
+    | The counter used for each laravel/ai driver in auto and native mode.
+    | Drivers not listed are always estimated. Register your own class
+    | implementing Counting\Contracts\Counter to support another provider.
+    |
+    */
+
+    'counters' => [
+        'anthropic' => AnthropicCounter::class,
+        'gemini' => GeminiCounter::class,
+        'openai' => OpenAiCounter::class,
+    ],
 
     /*
     |--------------------------------------------------------------------------
