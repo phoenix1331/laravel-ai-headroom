@@ -1,0 +1,7 @@
+{
+    "error": {
+        "code": 400,
+        "message": "* GenerateContentRequest.contents: contents is not specified\n",
+        "status": "INVALID_ARGUMENT"
+    }
+}
